@@ -22,7 +22,8 @@ FormNameToURL_Map = {}
 FormNameToURL_Map['django-admin'.lower()] = (None, LoadAdmin)
 
 FormNameToURL_Map['test01'.lower()] = (None, testforms.Test01)
-FormNameToURL_Map['test02'.lower()] = (None, testforms.Test02)
+# FormNameToURL_Map['test02'.lower()] = (None, testforms.Test02)
+FormNameToURL_Map['test02'.lower()] = (None, testforms.refsForm)
 FormNameToURL_Map['test03'.lower()] = (None, testforms.Test03)
 
 FormNameToURL_Map['HBLForm'.lower()] = (None, forms.HBLForm)

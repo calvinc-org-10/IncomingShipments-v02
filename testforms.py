@@ -1,5 +1,7 @@
 from typing import Dict, List, Any
 
+from django.db import models
+
 from PySide6.QtCore import (QCoreApplication,
     Qt, Slot,
     QDate,
@@ -94,19 +96,17 @@ class Test03():
         pass
 
 class refsForm(QWidget):
-    _linkedTables = {
+    _linkedTables:Dict[reference_ties.refTblChoices, models.Model] = {
         reference_ties.refTblChoices.Invoices      : Invoices,
         reference_ties.refTblChoices.ShippingForms : ShippingForms,
         reference_ties.refTblChoices.HBL           : HBL,
         reference_ties.refTblChoices.Containers    : Containers,
     }
 
-    currRec:reference_ties = None
+    currRec:references = None
     linkedRecs:Dict[reference_ties.refTblChoices, Any] = { tbl: None for tbl in _linkedTables}
     
-    columnHBL, columnContainers, columnShipForms, columnInvoices = range(4)
-        # actually used as column numbers in a QGridLayout, so as much as I want to, I can't set
-        # reference_ties.refTblChoices.HBL, reference_ties.refTblChoices.Containers, reference_ties.refTblChoices.ShippingForms, reference_ties.refTblChoices.Invoices
+    lnkTblcolumnNum = {reference_ties.refTblChoices(choice): index  for index, (choice, _) in enumerate(reference_ties.refTblChoices.choices)}
     rowLabel, rowAddBtn, rowRefList = range(3)
 
     def __init__(self, parent:QWidget = None):
@@ -127,9 +127,9 @@ class refsForm(QWidget):
         ### FormHdr
 
         # self.layoutwidgetFormHdr = QWidget()
-        self.layoutFormHdr = QVBoxLayout(self.layoutwidgetFormHdr)
+        self.layoutFormHdr = QVBoxLayout()
         
-        self.lblFormName = QLabel(self)
+        self.lblFormName = QLabel()
         wdgt = self.lblFormName
         wdgt.setObjectName(u"lblFormName")
         font1 = QFont()
@@ -148,9 +148,9 @@ class refsForm(QWidget):
         ### FormMainTop
 
         # self.layoutwidgetFormMainTop = QWidget(self)
-        self.layoutFormMainTop = QHBoxLayout(self.layoutwidgetFormMainTop)
-        self.layoutFormMainTopLeft = QFormLayout(self.layoutwidgetFormMainTop)
-        self.layoutFormMainTopRight = QVBoxLayout(self.layoutwidgetFormMainTop)
+        self.layoutFormMainTop = QHBoxLayout()
+        self.layoutFormMainTopLeft = QFormLayout()
+        self.layoutFormMainTopRight = QVBoxLayout()
         self.layoutFormMainTop.addLayout(self.layoutFormMainTopLeft)
         self.layoutFormMainTop.addLayout(self.layoutFormMainTopRight)
         
@@ -159,24 +159,24 @@ class refsForm(QWidget):
         refid_codeblock = True      # I do this to emphasize a logical codeblock unit
         if refid_codeblock:
             # self.lWidg_refidBlock = QWidget()
-            self.lyout_refidBlock = QHBoxLayout(self.lWidg_refidBlock)
+            self.lyout_refidBlock = QHBoxLayout()
             refdict = {rec.pk: rec.emaildatefrom_or_filelocation for rec in references.objects.all()}
-            self.dlistrefid = cDataList(refdict,parent=self.lWidg_refidBlock)
+            self.dlistrefid = cDataList(refdict)
             self.dlistrefid.setProperty('field', 'emaildatefrom_or_filelocation')
             self.dlistrefid.editingFinished.connect(self.getRecordFromGoto)
-            self.lblrefidExpln = QLabel(self.lWidg_refidBlock)
+            self.lblrefidExpln = QLabel(self)
             self.lblrefidExpln.setText(self.tr('(if the ref id you enter doesn\'t exist, it will be created)'))
-            self.lblrefidExpln.setWordWrap()
+            self.lblrefidExpln.setWordWrap(True)
             self.lyout_refidBlock.addWidget(self.dlistrefid)
             self.lyout_refidBlock.addWidget(self.lblrefidExpln)
         FilePath_codeblock = True      # I do this to emphasize a logical codeblock unit
         if FilePath_codeblock:
             # self.lWidg_FilePathBlock = QWidget()
-            self.lyout_FilePathBlock = QHBoxLayout(self.lWidg_FilePathBlock)
-            self.lnedtFilePath = QLineEdit(self.lWidg_FilePathBlock)
+            self.lyout_FilePathBlock = QHBoxLayout()
+            self.lnedtFilePath = QLineEdit(self)
             self.lnedtFilePath.setProperty('field', 'FilePath')
             self.lnedtFilePath.editingFinished.connect(lambda: self.changeField(self.lnedtFilePath))
-            self.btnChooseFilePaths = QPushButton(self.tr('Choose Files'),self.lWidg_FilePathBlock)
+            self.btnChooseFilePaths = QPushButton(self.tr('Choose Files'),self)
             self.btnChooseFilePaths.clicked.connect(lambda: pleaseWriteMe(self, 'Choose File Path - use QFileDialog'))
             self.lyout_FilePathBlock.addWidget(self.lnedtFilePath)
             self.lyout_FilePathBlock.addWidget(self.btnChooseFilePaths)
@@ -190,7 +190,7 @@ class refsForm(QWidget):
 
         self.layoutFormMainTopRight.addWidget(self.lblRecID)
         self.layoutFormMainTopRight.addSpacing(20)
-        self.btnCommit = QPushButton(self.layoutwidgetFormMainTop)
+        self.btnCommit = QPushButton()
         self.btnCommit.clicked.connect(lambda: self.writeRecord())
         self.layoutFormMainTopRight.addWidget(self.btnCommit)
 
@@ -202,8 +202,10 @@ class refsForm(QWidget):
         # self.layoutwidgetFormMainDetail = QWidget(self)
         self.layoutFormMainDetail = QGridLayout()
         
-        columnHBL, columnContainers, columnShipForms, columnInvoices \
-            = self.columnHBL, self.columnContainers, self.columnShipForms, self.columnInvoices
+        columnHBL = self.lnkTblcolumnNum[reference_ties.refTblChoices.HBL]
+        columnContainers = self.lnkTblcolumnNum[reference_ties.refTblChoices.Containers]
+        columnShipForms = self.lnkTblcolumnNum[reference_ties.refTblChoices.ShippingForms]
+        columnInvoices = self.lnkTblcolumnNum[reference_ties.refTblChoices.Invoices]
         rowLabel, rowAddBtn, rowRefList \
             = self.rowLabel, self.rowAddBtn, self.rowRefList
         #
@@ -213,13 +215,13 @@ class refsForm(QWidget):
         self.wdgtDetail[columnShipForms][rowLabel] = QLabel(self.tr('Shipping Forms'), self)
         self.wdgtDetail[columnInvoices][rowLabel] = QLabel(self.tr('Invoices'), self)
         #
-        self.wdgtDetail[columnHBL][rowAddBtn] = QPushButton(self.tr('Add HBL', self))
+        self.wdgtDetail[columnHBL][rowAddBtn] = QPushButton(self.tr('Add HBL'), self)
         self.wdgtDetail[columnHBL][rowAddBtn].clicked.connect(lambda: pleaseWriteMe(self, 'Add HBL'))                   # self.addDetail(reference_ties.refTblChoices.HBL)
-        self.wdgtDetail[columnContainers][rowAddBtn] = QPushButton(self.tr('Add Containers', self))
+        self.wdgtDetail[columnContainers][rowAddBtn] = QPushButton(self.tr('Add Containers'), self)
         self.wdgtDetail[columnContainers][rowAddBtn].clicked.connect(lambda: pleaseWriteMe(self, 'Add Containers'))     # self.addDetail(reference_ties.refTblChoices.Containers)
-        self.wdgtDetail[columnShipForms][rowAddBtn] = QPushButton(self.tr('Add Ship Forms', self))
+        self.wdgtDetail[columnShipForms][rowAddBtn] = QPushButton(self.tr('Add Ship Forms'), self)
         self.wdgtDetail[columnShipForms][rowAddBtn].clicked.connect(lambda: pleaseWriteMe(self, 'Add Ship Forms'))      # self.addDetail(reference_ties.refTblChoices.ShippingForms)
-        self.wdgtDetail[columnInvoices][rowAddBtn] = QPushButton(self.tr('Add Invoices', self))
+        self.wdgtDetail[columnInvoices][rowAddBtn] = QPushButton(self.tr('Add Invoices'), self)
         self.wdgtDetail[columnInvoices][rowAddBtn].clicked.connect(lambda: pleaseWriteMe(self, 'Add Invoices'))         # self.addDetail(reference_ties.refTblChoices.Invoices)
         #
         self.wdgtDetail[columnHBL][rowRefList] = QListWidget(self)
@@ -229,7 +231,7 @@ class refsForm(QWidget):
 
         for row in (rowLabel, rowAddBtn, rowRefList):
             for col in (columnHBL, columnContainers, columnShipForms, columnInvoices):
-                self.layoutFormMainDetail.addWidget(self.wdgtDetail[col][row])
+                self.layoutFormMainDetail.addWidget(self.wdgtDetail[col][row],row,col)
         self.layoutForm.addLayout(self.layoutFormMainDetail)
 
         # track if form dirty
@@ -246,7 +248,6 @@ class refsForm(QWidget):
     def retranslateUi(self):
         self.setWindowTitle(QCoreApplication.translate("Form", u"References", None))
 
-        self.lblNotes.setText(QCoreApplication.translate("Form", u"Notes", None))
         self.lblFormName.setText(QCoreApplication.translate("Form", u"References", None))
 
         self.btnCommit.setText(QCoreApplication.translate('Form','Commit\nChanges',None))
@@ -362,26 +363,17 @@ class refsForm(QWidget):
     # getRecordfromdb
 
     def fillFormFromcurrRec(self):
-        RESTARTHERE
         cRec = self.currRec
     
         # set pk display
         self.lblRecID.setText(str(cRec.pk))
 
         for field in cRec._meta.get_fields():
-            # special cases: ShippingForms, POList, containers, invoices:
-            if field.name in ['ShippingForms', 'POList', 'Invoices', 'Containers', 'reference_ties']:
-                continue
-
             field_value = getattr(cRec, field.name, None)
             field_valueStr = field_value
             # transform values for foreign keys and lookups
             forgnKeys = {
                 'id': cRec,
-                'Company': cRec.Company,
-                'FreightType': cRec.FreightType,
-                'Origin': cRec.Origin,
-                'Quote': cRec.Quote,
                 }
             if field.name in forgnKeys:
                 field_valueStr = str(forgnKeys[field.name])
@@ -417,71 +409,32 @@ class refsForm(QWidget):
             return
         
         # get linked recs
-        # _linkedTables = ['ShippingForms', 'PO', 'Invoices', 'Containers', 'reference_ties']
-        self.fillFormFromlinkedrefs()
-        
-        self.fillFormFromlinkedPO()
-        
-        self.fillFormFromlinkedInvoices()
+        for linkTbl in reference_ties.refTblChoices:
+            self.fillFormFromlinkedrefs(linkTbl)
 
-        self.fillFormFromlinkedContainers()
-
-        self.fillFormFromlinkedrefs()
-        
-        self.setFormDirty(self, False)
     # fillFormFromcurrRec
 
-    def fillFormFromlinkedPO(self):
+    def fillFormFromlinkedrefs(self, detailColumn:reference_ties.refTblChoices):
         cRec = self.currRec
-        self.linkedRecs['PO'] = cRec.POList.all()
-        self.listWidgetPO.clear()
-        self.listWidgetPO.addItems( [rec.PONumber for rec in self.linkedRecs['PO']] )
-    
-    def fillFormFromlinkedContainers(self):
-        cRec = self.currRec
-        self.linkedRecs['Containers'] = Containers.objects.filter(HBL=cRec)
-        qmodel = QModelContainers({'HBL': cRec})
-        self.tblViewContainers.setModel(qmodel)
-    
-    def fillFormFromlinkedInvoices(self):
-        cRec = self.currRec
-        self.linkedRecs['Invoices'] = Invoices.objects.filter(HBL=cRec)
-        qmodel = QModelInvoices({'HBL': cRec})
-        self.tblViewInvoices.setModel(qmodel)
-        self.InvcRecSet.init_recSet()
-        for rec in self.linkedRecs['Invoices']:
-            wdgtInv = Invoice_singleForm(InvRec=rec)
-            self.InvcRecSet.addWidget(wdgtInv)
-    
-    def fillFormFromlinkedrefs(self):
-        cRec = self.currRec
-        self.linkedRecs['ShippingForms'] = cRec.ShippingForms.all()
-        self.listWidgetShpFms.clear()
-        self.listWidgetShpFms.addItems( [str(rec.id_SmOffFormNum) for rec in self.linkedRecs['ShippingForms']] )
-    
-    def fillFormFromlinkedrefs(self):
-        cRec = self.currRec
-        # fill references
-        Q1 = Q(table_ref=refs.refTblChoices.Containers) & Q(record_ref__in=self.linkedRecs['Containers'].values_list('pk'))
-        Q2 = Q(table_ref=refs.refTblChoices.HBL) & Q(record_ref=cRec.pk)
-        Q3 = Q(table_ref=refs.refTblChoices.Invoices) & Q(record_ref__in=self.linkedRecs['Invoices'].values_list('pk'))
-        Q4 = Q(table_ref=refs.refTblChoices.ShippingForms) & Q(record_ref__in=self.linkedRecs['ShippingForms'].values_list('pk'))
-        reflist = all_references().filter(Q1 | Q2 | Q3 | Q4)
-        self.linkedRecs['reference_ties'] = reflist
-        qmodel = QModelrefs(reflist)
-        self.tblViewrefs.setModel(qmodel)
-    
+
+        refList = self.wdgtDetail[self.lnkTblcolumnNum[detailColumn]][self.rowRefList]
+        refList.clear()
+
+        linkedRecs = all_references().filter(email=cRec, table_ref=detailColumn)    #detailColumn.value?
+        self.linkedRecs[detailColumn] = linkedRecs
+        for rec in linkedRecs:
+            rec.record_name = str(self._linkedTables[detailColumn].objects.get(pk=rec.record_ref))
+
+        self.wdgtDetail[self.lnkTblcolumnNum[detailColumn]][self.rowRefList].addItems( 
+            [f'{rec.record_name} (pk={rec.record_ref})' for rec in linkedRecs] )
     
     ##########################################
     ########    Update
 
+#        RESTARTHERE
     @Slot()
     def changeField(self, wdgt:QWidget) -> bool:
         forgnKeys = {   
-            'Company',
-            'FreightType',
-            'Origin',
-            'Quote',
             }
         cRec = self.currRec
         dbField = wdgt.property('field')
