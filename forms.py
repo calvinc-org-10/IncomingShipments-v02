@@ -59,6 +59,7 @@ choices_HBL = {rec.pk: str(rec) for rec in HBL.objects.only('pk')}
 choices_Inv = {rec.pk: str(rec) for rec in Invoices.objects.only('pk')}
 choices_PO  = {rec.pk: str(rec) for rec in PO.objects.only('pk')}
 choices_ShFm = { str(x): x.pk for x in ShippingForms.objects.all() }
+choices_Container = { str(x): x.pk for x in Containers.objects.all() }
 
 class IncShipAppchoiceWidgets:
     class chooseHBL(cDataList):
@@ -76,6 +77,10 @@ class IncShipAppchoiceWidgets:
     class chooseShipForm(cComboBoxFromDict):
         def __init__(self, parent = None):
             dict = Nochoice | choices_ShFm
+            super().__init__(dict, parent)
+    class chooseContainer(cComboBoxFromDict):
+        def __init__(self, parent = None):
+            dict = Nochoice | choices_Container
             super().__init__(dict, parent)
     class chooseCompany(cComboBoxFromDict):
         def __init__(self, parent = None):

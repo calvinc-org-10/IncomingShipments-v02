@@ -1,5 +1,7 @@
 from typing import Dict, List, Any
 
+from datetime import datetime
+
 from django.db import models
 
 from PySide6.QtCore import (QCoreApplication,
@@ -106,8 +108,14 @@ class refsForm(QWidget):
     currRec:references = None
     linkedRecs:Dict[reference_ties.refTblChoices, Any] = { tbl: None for tbl in _linkedTables}
     
-    lnkTblcolumnNum = {reference_ties.refTblChoices(choice): index  for index, (choice, _) in enumerate(reference_ties.refTblChoices.choices)}
-    rowLabel, rowAddBtn, rowRefList = range(3)
+    # grid positions in Detail part of form
+    lnkTblcolumnNum:Dict[reference_ties.refTblChoices, int] = {
+        reference_ties.refTblChoices.HBL           : 0,
+        reference_ties.refTblChoices.ShippingForms : 1,
+        reference_ties.refTblChoices.Containers    : 2,
+        reference_ties.refTblChoices.Invoices      : 3,
+    }
+    rowLabel, rowTblLink = (0, 1)
 
     def __init__(self, parent:QWidget = None):
         super().__init__(parent)
@@ -126,7 +134,6 @@ class refsForm(QWidget):
 
         ### FormHdr
 
-        # self.layoutwidgetFormHdr = QWidget()
         self.layoutFormHdr = QVBoxLayout()
         
         self.lblFormName = QLabel()
@@ -147,7 +154,6 @@ class refsForm(QWidget):
 
         ### FormMainTop
 
-        # self.layoutwidgetFormMainTop = QWidget(self)
         self.layoutFormMainTop = QHBoxLayout()
         self.layoutFormMainTopLeft = QFormLayout()
         self.layoutFormMainTopRight = QVBoxLayout()
@@ -158,7 +164,6 @@ class refsForm(QWidget):
         self.lblRecID.setProperty('field', 'id')
         refid_codeblock = True      # I do this to emphasize a logical codeblock unit
         if refid_codeblock:
-            # self.lWidg_refidBlock = QWidget()
             self.lyout_refidBlock = QHBoxLayout()
             refdict = {rec.pk: rec.emaildatefrom_or_filelocation for rec in references.objects.all()}
             self.dlistrefid = cDataList(refdict)
@@ -171,7 +176,6 @@ class refsForm(QWidget):
             self.lyout_refidBlock.addWidget(self.lblrefidExpln)
         FilePath_codeblock = True      # I do this to emphasize a logical codeblock unit
         if FilePath_codeblock:
-            # self.lWidg_FilePathBlock = QWidget()
             self.lyout_FilePathBlock = QHBoxLayout()
             self.lnedtFilePath = QLineEdit(self)
             self.lnedtFilePath.setProperty('field', 'FilePath')
@@ -189,7 +193,7 @@ class refsForm(QWidget):
         self.layoutFormMainTopLeft.addRow(self.tr('notes'), self.txtedtNotes)
 
         self.layoutFormMainTopRight.addWidget(self.lblRecID)
-        self.layoutFormMainTopRight.addSpacing(20)
+        self.layoutFormMainTopRight.addSpacing(10)
         self.btnCommit = QPushButton()
         self.btnCommit.clicked.connect(lambda: self.writeRecord())
         self.layoutFormMainTopRight.addWidget(self.btnCommit)
@@ -199,43 +203,112 @@ class refsForm(QWidget):
 
         ### FormMainDetail
 
-        # self.layoutwidgetFormMainDetail = QWidget(self)
         self.layoutFormMainDetail = QGridLayout()
         
         columnHBL = self.lnkTblcolumnNum[reference_ties.refTblChoices.HBL]
         columnContainers = self.lnkTblcolumnNum[reference_ties.refTblChoices.Containers]
         columnShipForms = self.lnkTblcolumnNum[reference_ties.refTblChoices.ShippingForms]
         columnInvoices = self.lnkTblcolumnNum[reference_ties.refTblChoices.Invoices]
-        rowLabel, rowAddBtn, rowRefList \
-            = self.rowLabel, self.rowAddBtn, self.rowRefList
+        rowLabel, rowRefList \
+            = self.rowLabel, self.rowTblLink
         #
-        self.wdgtDetail = [[None for row in (rowLabel, rowAddBtn, rowRefList)] for col in (columnHBL, columnContainers, columnShipForms, columnInvoices)]
+        self.wdgtDetail = [[None for row in (rowLabel, rowRefList)] for col in (columnHBL, columnContainers, columnShipForms, columnInvoices)]
         self.wdgtDetail[columnHBL][rowLabel] = QLabel('HBL', self)
+        self.wdgtDetail[columnHBL][rowLabel].setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.wdgtDetail[columnContainers][rowLabel] = QLabel(self.tr('Containers'), self)
+        self.wdgtDetail[columnContainers][rowLabel].setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.wdgtDetail[columnShipForms][rowLabel] = QLabel(self.tr('Shipping Forms'), self)
+        self.wdgtDetail[columnShipForms][rowLabel].setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.wdgtDetail[columnInvoices][rowLabel] = QLabel(self.tr('Invoices'), self)
+        self.wdgtDetail[columnInvoices][rowLabel].setAlignment(Qt.AlignmentFlag.AlignCenter)
         #
-        self.wdgtDetail[columnHBL][rowAddBtn] = QPushButton(self.tr('Add HBL'), self)
-        self.wdgtDetail[columnHBL][rowAddBtn].clicked.connect(lambda: pleaseWriteMe(self, 'Add HBL'))                   # self.addDetail(reference_ties.refTblChoices.HBL)
-        self.wdgtDetail[columnContainers][rowAddBtn] = QPushButton(self.tr('Add Containers'), self)
-        self.wdgtDetail[columnContainers][rowAddBtn].clicked.connect(lambda: pleaseWriteMe(self, 'Add Containers'))     # self.addDetail(reference_ties.refTblChoices.Containers)
-        self.wdgtDetail[columnShipForms][rowAddBtn] = QPushButton(self.tr('Add Ship Forms'), self)
-        self.wdgtDetail[columnShipForms][rowAddBtn].clicked.connect(lambda: pleaseWriteMe(self, 'Add Ship Forms'))      # self.addDetail(reference_ties.refTblChoices.ShippingForms)
-        self.wdgtDetail[columnInvoices][rowAddBtn] = QPushButton(self.tr('Add Invoices'), self)
-        self.wdgtDetail[columnInvoices][rowAddBtn].clicked.connect(lambda: pleaseWriteMe(self, 'Add Invoices'))         # self.addDetail(reference_ties.refTblChoices.Invoices)
-        #
-        self.wdgtDetail[columnHBL][rowRefList] = QListWidget(self)
-        self.wdgtDetail[columnContainers][rowRefList] = QListWidget(self)
-        self.wdgtDetail[columnShipForms][rowRefList] = QListWidget(self)
-        self.wdgtDetail[columnInvoices][rowRefList] = QListWidget(self)
+        self.wdgtDetail[columnHBL][rowRefList] = IncShipAppchoiceWidgets.chooseHBL(parent=self)
+        self.wdgtDetail[columnHBL][rowRefList].editingFinished.connect(lambda: self.tempDebugProc(None, 'Respond to HBL choice'))
+        self.wdgtDetail[columnInvoices][rowRefList] = IncShipAppchoiceWidgets.chooseInvoice(parent=self)
+        self.wdgtDetail[columnInvoices][rowRefList].editingFinished.connect(lambda: self.tempDebugProc(None, 'Respond to Invoice choice'))
+        self.wdgtDetail[columnContainers][rowRefList] = IncShipAppchoiceWidgets.chooseContainer(self)
+        self.wdgtDetail[columnContainers][rowRefList].setEditable(True)
+        self.wdgtDetail[columnContainers][rowRefList].setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
+        self.wdgtDetail[columnContainers][rowRefList].activated.connect(lambda idx: self.tempDebugProc(idx, f'Respond to Container {idx} choice'))
+        self.wdgtDetail[columnShipForms][rowRefList] = IncShipAppchoiceWidgets.chooseShipForm(self)
+        self.wdgtDetail[columnShipForms][rowRefList].setEditable(True)
+        self.wdgtDetail[columnShipForms][rowRefList].setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
+        self.wdgtDetail[columnShipForms][rowRefList].activated.connect(lambda idx: self.tempDebugProc(idx, f'Respond to Ship Form {idx} choice'))
+        # TODO: HOT! connect procs for new entries
+        # TODO: HOT! set for dirty on change
 
-        for row in (rowLabel, rowAddBtn, rowRefList):
+        for row in (rowLabel, rowRefList):
             for col in (columnHBL, columnContainers, columnShipForms, columnInvoices):
                 self.layoutFormMainDetail.addWidget(self.wdgtDetail[col][row],row,col)
+        
+        newDetailrow = self.layoutFormMainDetail.rowCount()
+        Company_codeblock = True      # I do this to emphasize a logical codeblock unit
+        if Company_codeblock:
+            self.layoutBlockCompany = QHBoxLayout()
+            self.lblCompany = QLabel()
+            self.comboCompany = IncShipAppchoiceWidgets.chooseCompany()
+            self.layoutBlockCompany.addWidget(self.lblCompany)
+            self.layoutBlockCompany.addWidget(self.comboCompany)
+        Mode_codeblock = True      # I do this to emphasize a logical codeblock unit
+        if Mode_codeblock:
+            self.layoutBlockMode = QHBoxLayout()
+            self.lblMode = QLabel()
+            self.comboMode = IncShipAppchoiceWidgets.chooseFreightType()
+            self.layoutBlockMode.addWidget(self.lblMode)
+            self.layoutBlockMode.addWidget(self.comboMode)
+        Origin_codeblock = True      # I do this to emphasize a logical codeblock unit
+        if Origin_codeblock:
+            self.layoutBlockOrigin = QHBoxLayout()
+            self.lblOrigin = QLabel()
+            self.comboOrigin = IncShipAppchoiceWidgets.chooseOrigin()
+            self.layoutBlockOrigin.addWidget(self.lblOrigin)
+            self.layoutBlockOrigin.addWidget(self.comboOrigin)
+        self.layoutFormMainDetail.addLayout(self.layoutBlockCompany,newDetailrow,0)
+        self.layoutFormMainDetail.addLayout(self.layoutBlockMode,newDetailrow,1)
+        self.layoutFormMainDetail.addLayout(self.layoutBlockOrigin,newDetailrow,2)
+        
+        newDetailrow += 1
+        self.lblDateHdr = QLabel()
+        self.layoutFormMainDetail.addWidget(self.lblDateHdr,newDetailrow,0)
+        
+        newDetailrow += 1
+        
+        PickupDt_codeblock = True      # I do this to emphasize a logical codeblock unit
+        if PickupDt_codeblock:
+            self.layoutBlockPickupDt = QHBoxLayout()
+            self.lblPickupDt = QLabel()
+            self.dtedPickupDt = QDateEdit()
+            self.layoutBlockPickupDt.addWidget(self.lblPickupDt)
+            self.layoutBlockPickupDt.addWidget(self.dtedPickupDt)
+        ETA_codeblock = True      # I do this to emphasize a logical codeblock unit
+        if ETA_codeblock:
+            self.layoutBlockETA = QHBoxLayout()
+            self.lblETA = QLabel()
+            self.dtedETA = QDateEdit()
+            self.layoutBlockETA.addWidget(self.lblETA)
+            self.layoutBlockETA.addWidget(self.dtedETA)
+        DelivAppt_codeblock = True      # I do this to emphasize a logical codeblock unit
+        if DelivAppt_codeblock:
+            self.layoutBlockDelivAppt = QHBoxLayout()
+            self.lblDelivAppt = QLabel()
+            self.dtedDelivAppt = QDateEdit()
+            self.layoutBlockDelivAppt.addWidget(self.lblDelivAppt)
+            self.layoutBlockDelivAppt.addWidget(self.dtedDelivAppt)
+        LFD_codeblock = True      # I do this to emphasize a logical codeblock unit
+        if LFD_codeblock:
+            self.layoutBlockLFD = QHBoxLayout()
+            self.lblLFD = QLabel()
+            self.dtedLFD = QDateEdit()
+            self.layoutBlockLFD.addWidget(self.lblLFD)
+            self.layoutBlockLFD.addWidget(self.dtedLFD)
+        self.layoutFormMainDetail.addLayout(self.layoutBlockPickupDt,newDetailrow,0)
+        self.layoutFormMainDetail.addLayout(self.layoutBlockETA,newDetailrow,1)
+        self.layoutFormMainDetail.addLayout(self.layoutBlockDelivAppt,newDetailrow,2)
+        self.layoutFormMainDetail.addLayout(self.layoutBlockLFD,newDetailrow,3)
+        
         self.layoutForm.addLayout(self.layoutFormMainDetail)
 
         # track if form dirty
-        # self.setFormDirty(self, False)
         # make this a new record
         self.currRec = self.createNewrefRec()
         self.setFormDirty(self,False)
@@ -244,13 +317,26 @@ class refsForm(QWidget):
     # __init__
 
 
+    def tempDebugProc(self, parm, msg):
+        iWannaDebug = False
+        if iWannaDebug: breakpoint()
+        pleaseWriteMe(self, msg)
+
     #TODO: Move to init ??
     def retranslateUi(self):
         self.setWindowTitle(QCoreApplication.translate("Form", u"References", None))
-
         self.lblFormName.setText(QCoreApplication.translate("Form", u"References", None))
 
         self.btnCommit.setText(QCoreApplication.translate('Form','Commit\nChanges',None))
+        
+        self.lblCompany.setText(QCoreApplication.translate("Form","Company:"))
+        self.lblMode.setText(QCoreApplication.translate("Form","Frt Type:"))
+        self.lblOrigin.setText(QCoreApplication.translate("Form","Origin:"))
+        self.lblDateHdr.setText(QCoreApplication.translate("Form","Dates"))
+        self.lblPickupDt.setText(QCoreApplication.translate("Form","Pickup:"))
+        self.lblETA.setText(QCoreApplication.translate("Form","ETA:"))
+        self.lblDelivAppt.setText(QCoreApplication.translate("Form","Deliv Appt:"))
+        self.lblLFD.setText(QCoreApplication.translate("Form","LFD:"))
    # retranslateUi
 
     # def newInvWidgetThisHBL(self) -> QWidget:
@@ -267,7 +353,7 @@ class refsForm(QWidget):
         if not id and refEnterd:
             # wdgtGoTo.undo()
 
-            # create new HBL record
+            # create new record
             ans = QMessageBox.question(
                 self, 
                 "Create ref?", f'Reference {refEnterd} does not exist. Create it?',
@@ -304,6 +390,12 @@ class refsForm(QWidget):
             reference_ties.refTblChoices.ShippingForms: ('Ship Form', 'Shipping Form', ShippingForms, 'id_SmOffFormNum'),
             reference_ties.refTblChoices.Invoices:      ('Invoice', 'Invoice', Invoices, 'InvoiceNumber'),
         }
+        requiredNewvals = {
+            reference_ties.refTblChoices.Containers:    {},
+            reference_ties.refTblChoices.HBL:           {'incoterm': ''},
+            reference_ties.refTblChoices.ShippingForms: {'incoterm': ''},
+            reference_ties.refTblChoices.Invoices:      {'InvoiceDate': datetime.today(), 'InvoiceAmount': 0.00, 'HBL': HBL.objects.filter(HBLNumber__icontains="none").first()},
+        }
         input_str, ok = QInputDialog.getText(self,
             f'Enter {blankFillIns[sectnDetail][0]}s', f'Enter {blankFillIns[sectnDetail][1]}s to add, separated by commas',
             )
@@ -325,7 +417,11 @@ class refsForm(QWidget):
                 if ans == QMessageBox.StandardButton.No:
                     continue
                 else:
-                    vluRec = blankFillIns[sectnDetail][2].objects.create(incoterm='', notes='', **{blankFillIns[sectnDetail][3]: vlu} )
+                    vluCreateDict = {
+                        blankFillIns[sectnDetail][3]: vlu, 
+                        'notes': '',
+                        } | requiredNewvals[sectnDetail]
+                    vluRec = blankFillIns[sectnDetail][2].objects.create(**vluCreateDict)
                 #endif ans == No
             # endif not sfRec
             
@@ -337,8 +433,8 @@ class refsForm(QWidget):
             )
         
         # rebuild section list
-        self.fillFormFromlinkedrefs()
-    # addShipFmToHBL
+        self.fillFormFromlinkedrefs(sectnDetail)
+    # addDetail
 
     def createNewrefRec(self, refID:str = None, saverec:bool = False) -> references:
         newRec = references(
@@ -417,7 +513,7 @@ class refsForm(QWidget):
     def fillFormFromlinkedrefs(self, detailColumn:reference_ties.refTblChoices):
         cRec = self.currRec
 
-        refList = self.wdgtDetail[self.lnkTblcolumnNum[detailColumn]][self.rowRefList]
+        refList = self.wdgtDetail[self.lnkTblcolumnNum[detailColumn]][self.rowTblLink]
         refList.clear()
 
         linkedRecs = all_references().filter(email=cRec, table_ref=detailColumn)    #detailColumn.value?
@@ -425,13 +521,12 @@ class refsForm(QWidget):
         for rec in linkedRecs:
             rec.record_name = str(self._linkedTables[detailColumn].objects.get(pk=rec.record_ref))
 
-        self.wdgtDetail[self.lnkTblcolumnNum[detailColumn]][self.rowRefList].addItems( 
+        self.wdgtDetail[self.lnkTblcolumnNum[detailColumn]][self.rowTblLink].addItems( 
             [f'{rec.record_name} (pk={rec.record_ref})' for rec in linkedRecs] )
     
     ##########################################
     ########    Update
 
-#        RESTARTHERE
     @Slot()
     def changeField(self, wdgt:QWidget) -> bool:
         forgnKeys = {   
@@ -480,17 +575,17 @@ class refsForm(QWidget):
         newrec = (cRec is None)
         
         # There MUST be a HBLNumber, and it can't belong to another record
-        if not cRec.HBLNumber:
-            QMessageBox(QMessageBox.Icon.Critical, 'Must provide HBL Number','You must provide a HBL Number!',
+        if not cRec.emaildatefrom_or_filelocation:
+            QMessageBox(QMessageBox.Icon.Critical, 'Must provide Ref id','You must provide a Reference id!',
                 QMessageBox.StandardButton.Ok, self).show()
-            self.lnedHBLNumber.setFocus()
+            self.dlistrefid.setFocus()
             return
-        existingrec = [R.pk for R in HBL.objects.filter(HBLNumber=cRec.HBLNumber)]
+        existingrec = [R.pk for R in references.objects.filter(emaildatefrom_or_filelocation=cRec.emaildatefrom_or_filelocation)]
         if len(existingrec) and cRec.pk not in existingrec:
-            QMessageBox(QMessageBox.Icon.Critical, 'HBL Number Exists', f'HBL {cRec.HBLNumber} exists in another record!',
+            QMessageBox(QMessageBox.Icon.Critical, 'ref id Exists', f'ref id {cRec.emaildatefrom_or_filelocation} exists in another record!',
                 QMessageBox.StandardButton.Ok, self).show()
-            self.lnedHBLNumber.clear()
-            self.lnedHBLNumber.setFocus()
+            self.dlistrefid.clear()
+            self.dlistrefid.setFocus()
             return
 
         # check other traps later
@@ -498,12 +593,10 @@ class refsForm(QWidget):
         cRec.save()
         pk = cRec.pk
         self.lblRecID.setText(str(pk))
-        
-        self.gotoHBL.setText(cRec.HBLNumber)
 
         if newrec:
             # add this record to self.gotoHBL.completer().model()
-            self.gotoHBL.addChoices({pk: str(cRec.HBLNumber)})
+            self.dlistrefid.addChoices({pk: str(cRec.emaildatefrom_or_filelocation)})
             
         self.setFormDirty(self, False)
 
