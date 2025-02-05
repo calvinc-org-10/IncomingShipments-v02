@@ -3,7 +3,7 @@ from typing import Any, Dict, List
 import re
 from openpyxl import load_workbook
 from datetime import date, datetime
-from incShip.models import HBL, ShippingForms, Containers, Invoices, PO, references, reference_ties
+from incShip.models import HBL, ShippingForms, Containers, Invoices, PO, references
 from incShip.models import Companies, FreightTypes, Organizations
 
 from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
@@ -22,7 +22,7 @@ from PySide6.QtWidgets import (QApplication, QWidget,
     QSizePolicy, QTabWidget, QTextEdit,
     )
 
-from forms import std_popdialogsize
+from forms import std_popdialogsize, fontFormTitle
 
 
 _DEFAULTDATE = date.today()
@@ -42,11 +42,7 @@ class LoadInvoices(QWidget):
         wdgt.setParent(self)
         wdgt.setObjectName(u"lblFormName")
         wdgt.setGeometry(QRect(150, 10, 400, 74))
-        #TODO: universal form title font
-        font1 = QFont()
-        font1.setFamilies([u"Century Gothic"])
-        font1.setPointSize(24)
-        wdgt.setFont(font1)
+        wdgt.setFont(fontFormTitle)
         wdgt.setFrameShape(QFrame.Shape.Panel)
         wdgt.setFrameShadow(QFrame.Shadow.Raised)
         wdgt.setAlignment(Qt.AlignmentFlag.AlignCenter)

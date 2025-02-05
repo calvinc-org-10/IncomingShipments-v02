@@ -1,14 +1,15 @@
 import decimal
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple, NamedTuple
+from collections import namedtuple
 
 from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
     QMetaObject, QObject, QPoint, QRect, QSize,
     QTime, QUrl, Qt, Slot)
-from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
+from PySide6.QtGui import (QBrush, QColor, QColorConstants, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QWidget, QMessageBox, QInputDialog,
+from PySide6.QtWidgets import (QApplication, QWidget, QScrollArea, QMessageBox, QInputDialog,
     QGridLayout, QSpacerItem, QVBoxLayout, QHBoxLayout,
     QListView, QListWidget, QColumnView, QListWidgetItem, QTableView, QHeaderView,
     QComboBox, QDateEdit, QFrame, QCheckBox,
@@ -23,7 +24,7 @@ from cMenu.utils import cDataList, cDictModel, cComboBoxFromDict, cQRecordsetVie
 
 from incShip.models import (
     HBL, ShippingForms, PO, Invoices, Containers, 
-    all_references, reference_ties as refs,
+    references as refs,
     Origins, Companies, Organizations, FreightTypes,
     QModelContainers, QModelInvoices, 
     QModelrefs, 
@@ -31,6 +32,11 @@ from incShip.models import (
 
 
 _DATE_FORMAT = 'yyyy-MM-dd'
+
+fontFormTitle = QFont()
+fontFormTitle.setFamilies([u"Copperplate Gothic"])
+fontFormTitle.setPointSize(24)
+
 
 ##########################################################
 ##########################################################
@@ -58,8 +64,8 @@ Nochoice = {'---': None}    # only needed for combo boxes, not datalists
 choices_HBL = {rec.pk: str(rec) for rec in HBL.objects.only('pk')}
 choices_Inv = {rec.pk: str(rec) for rec in Invoices.objects.only('pk')}
 choices_PO  = {rec.pk: str(rec) for rec in PO.objects.only('pk')}
-choices_ShFm = { str(x): x.pk for x in ShippingForms.objects.all() }
-choices_Container = { str(x): x.pk for x in Containers.objects.all() }
+choices_ShFm = {rec.pk: str(rec) for rec in ShippingForms.objects.only('pk')}
+choices_Container = {rec.pk: str(rec) for rec in Containers.objects.only('pk')}
 
 class IncShipAppchoiceWidgets:
     class chooseHBL(cDataList):
@@ -74,14 +80,14 @@ class IncShipAppchoiceWidgets:
         def __init__(self, initval = '', parent = None):
             choices = choices_PO
             super().__init__(choices, initval, parent)
-    class chooseShipForm(cComboBoxFromDict):
-        def __init__(self, parent = None):
-            dict = Nochoice | choices_ShFm
-            super().__init__(dict, parent)
-    class chooseContainer(cComboBoxFromDict):
-        def __init__(self, parent = None):
-            dict = Nochoice | choices_Container
-            super().__init__(dict, parent)
+    class chooseShipForm(cDataList):
+        def __init__(self, initval = '', parent = None):
+            choices = choices_ShFm
+            super().__init__(choices, initval, parent)
+    class chooseContainer(cDataList):
+        def __init__(self, initval = '', parent = None):
+            choices = choices_Container
+            super().__init__(choices, initval, parent)
     class chooseCompany(cComboBoxFromDict):
         def __init__(self, parent = None):
             dict = Nochoice | { str(x): x.pk for x in Companies.objects.all() }
@@ -114,6 +120,8 @@ class HBLForm(QWidget):
 
     currRec:HBL = HBL()
     linkedRecs:Dict[str, Any] = { tbl: None for tbl in _linkedTables}
+    formFields:Dict[str, Tuple[QWidget, Any]] = {}
+
     
     def __init__(self, parent:QWidget = None):
         super().__init__(parent)
@@ -136,10 +144,7 @@ class HBLForm(QWidget):
         self.lblFormName = QLabel(self)
         wdgt = self.lblFormName
         wdgt.setObjectName(u"lblFormName")
-        font1 = QFont()
-        font1.setFamilies([u"Century Gothic"])
-        font1.setPointSize(24)
-        wdgt.setFont(font1)
+        wdgt.setFont(fontFormTitle)
         wdgt.setFrameShape(QFrame.Shape.Panel)
         wdgt.setFrameShadow(QFrame.Shadow.Raised)
         wdgt.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -153,12 +158,13 @@ class HBLForm(QWidget):
         wdgt.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
         wdgt.setPlaceholderText('Enter a HBL')
         wdgt.setProperty('field', 'id')
+        self.formFields['id'] = (wdgt, None)
         wdgt.setEnabled(True)       # shouldn't be necessary
         wdgt.editingFinished.connect(self.getRecordFromGoto)
         self.lblHBLNotFound = QLabel(self)
         wdgtNF = self.lblHBLNotFound
         palette = QPalette()
-        brush = QBrush(QColor(255, 0, 0, 228))
+        brush = QBrush(QColorConstants.Red)
         brush.setStyle(Qt.SolidPattern)
         palette.setBrush(QPalette.Active, QPalette.WindowText, brush)
         palette.setBrush(QPalette.Inactive, QPalette.WindowText, brush)
@@ -188,6 +194,7 @@ class HBLForm(QWidget):
         self.layoutFormMain.addWidget(wdgtlbl, 0, 0)
         wdgt.setObjectName(u"comboCompany")
         wdgt.setProperty('field', 'Company')
+        self.formFields['Company'] = (wdgt, None)
         wdgt.currentIndexChanged.connect(lambda indx: self.changeField(self.comboCompany))
         self.layoutFormMain.addWidget(wdgt, 1, 0)
 
@@ -197,6 +204,7 @@ class HBLForm(QWidget):
         self.layoutFormMain.addWidget(wdgtlbl, 0, 1)
         wdgt.setObjectName(u"lnedHBLNumber")
         wdgt.setProperty('field', 'HBLNumber')
+        self.formFields['HBLNumber'] = (wdgt, None)
         #TODO: write Slot to check if HBL exists
         wdgt.editingFinished.connect(lambda: self.changeField(self.lnedHBLNumber))
         self.layoutFormMain.addWidget(wdgt, 1, 1)
@@ -207,6 +215,7 @@ class HBLForm(QWidget):
         self.layoutFormMain.addWidget(wdgtlbl, 0, 2)
         wdgt.setObjectName(u"comboFreightType")
         wdgt.setProperty('field', 'FreightType')
+        self.formFields['FreightType'] = (wdgt, None)
         wdgt.currentIndexChanged.connect(lambda indx: self.changeField(self.comboFreightType))
         self.layoutFormMain.addWidget(wdgt, 1, 2)
 
@@ -216,6 +225,7 @@ class HBLForm(QWidget):
         self.layoutFormMain.addWidget(wdgtlbl, 0, 3)
         wdgt.setObjectName(u"comboOrigin")
         wdgt.setProperty('field', 'Origin')
+        self.formFields['Origin'] = (wdgt, None)
         wdgt.currentIndexChanged.connect(lambda indx: self.changeField(self.comboOrigin))
         self.layoutFormMain.addWidget(wdgt, 1, 3)
 
@@ -225,6 +235,7 @@ class HBLForm(QWidget):
         self.layoutFormMain.addWidget(wdgtlbl, 0, 4)
         wdgt.setObjectName(u"lnedtIncoterm")
         wdgt.setProperty('field', 'incoterm')
+        self.formFields['incoterm'] = (wdgt, None)
         wdgt.editingFinished.connect(lambda: self.changeField(self.lnedtIncoterm))
         self.layoutFormMain.addWidget(wdgt, 1, 4)
 
@@ -236,6 +247,7 @@ class HBLForm(QWidget):
         wdgt.setDisplayFormat(_DATE_FORMAT)
         wdgt.setSpecialValueText('---')
         wdgt.setProperty('field', 'ETA')
+        self.formFields['ETA'] = (wdgt, None)
         wdgt.userDateChanged.connect(lambda: self.changeField(self.dtedtETA))
         self.layoutFormMain.addWidget(wdgt, 3, 0)
 
@@ -246,6 +258,7 @@ class HBLForm(QWidget):
         wdgt.setObjectName(u"dtedtLFD")
         wdgt.setDisplayFormat(_DATE_FORMAT)
         wdgt.setProperty('field', 'LFD')
+        self.formFields['LFD'] = (wdgt, None)
         wdgt.userDateChanged.connect(lambda: self.changeField(self.dtedtLFD))
         self.layoutFormMain.addWidget(wdgt, 3, 1)
 
@@ -255,6 +268,7 @@ class HBLForm(QWidget):
         self.layoutFormMain.addWidget(wdgtlbl, 2, 2)
         wdgt.setObjectName(u"lnedtChgWt")
         wdgt.setProperty('field', 'ChargeableWeight')
+        self.formFields['ChargeableWeight'] = (wdgt, None)
         wdgt.editingFinished.connect(lambda: self.changeField(self.lnedtChgWt))
         self.layoutFormMain.addWidget(wdgt, 3, 2)
 
@@ -264,6 +278,7 @@ class HBLForm(QWidget):
         self.layoutFormMain.addWidget(wdgtlbl, 2, 3)
         wdgt.setObjectName(u"lnedtPcs")
         wdgt.setProperty('field', 'Pieces')
+        self.formFields['Pieces'] = (wdgt, None)
         wdgt.editingFinished.connect(lambda: self.changeField(self.lnedtPcs))
         self.layoutFormMain.addWidget(wdgt, 3, 3)
 
@@ -273,6 +288,7 @@ class HBLForm(QWidget):
         self.layoutFormMain.addWidget(wdgtlbl, 2, 4)
         wdgt.setObjectName(u"lnedtVolume")
         wdgt.setProperty('field', 'Volume')
+        self.formFields['Volume'] = (wdgt, None)
         wdgt.editingFinished.connect(lambda: self.changeField(self.lnedtVolume))
         self.layoutFormMain.addWidget(wdgt, 3, 4)
 
@@ -281,6 +297,7 @@ class HBLForm(QWidget):
         wdgtlbl.setObjectName(u"lblNotes")
         wdgt.setObjectName(u"txtedtNotes")
         wdgt.setProperty('field', 'notes')
+        self.formFields['notes'] = (wdgt, None)
         wdgt.textChanged.connect(lambda: self.changeField(self.txtedtNotes))
         self.layoutFormMain.addWidget(wdgtlbl, 4, 1, Qt.AlignmentFlag.AlignBottom)
         self.layoutFormMain.addWidget(wdgt, 5, 1, 3, 4)
@@ -289,6 +306,7 @@ class HBLForm(QWidget):
         wdgt = self.listWidgetPO
         wdgt.setObjectName(u"listWidgetPO")
         wdgt.setProperty('field', 'POList')
+        self.formFields['POList'] = (wdgt, None)
         wdgt.itemClicked.connect(lambda item: pleaseWriteMe(self, 'PO clicks'))
         wdgt.itemDoubleClicked.connect(lambda item: pleaseWriteMe(self, 'PO doubleclicks'))
         self.btnAddPO = QPushButton(self.layoutwidgetFormMain)
@@ -302,6 +320,7 @@ class HBLForm(QWidget):
         wdgt = self.listWidgetShpFms
         wdgt.setObjectName(u"listWidgetShpFms")
         wdgt.setProperty('field', 'ShippingForms')
+        self.formFields['ShippingForms'] = (wdgt, None)
         wdgt.itemClicked.connect(lambda item: pleaseWriteMe(self, 'ShpFms clicks'))
         wdgt.itemDoubleClicked.connect(lambda item: pleaseWriteMe(self, 'ShpFms doubleclicks'))
         self.btnAddShpFms = QPushButton(self.layoutwidgetFormMain)
@@ -371,7 +390,7 @@ class HBLForm(QWidget):
         self.btnAddContainer = QPushButton(self.tabContainers)
         wdgt = self.btnAddContainer
         wdgt.setObjectName('btnAddContainer')
-        wdgt.clicked.connect(lambda: pleaseWriteMe(self, 'add Container clicks'))
+        wdgt.clicked.connect(lambda: self.addContainerToHBL())
         wdgt.setGeometry(10+thisWindowsize.width()-175, 30, 90, 90)
 
         self.tabrefs = QWidget()
@@ -428,7 +447,11 @@ class HBLForm(QWidget):
 
         self.retranslateUi()
 
-        QMetaObject.connectSlotsByName(self)
+        #TODO: play weith this and get it to work
+        # self.windowScroller = QScrollArea(self)
+        # self.windowScroller.setWidget(self)
+        # self.windowScroller.setWidgetResizable(True)
+        
     # __init__
 
     def retranslateUi(self):
@@ -564,6 +587,35 @@ class HBLForm(QWidget):
         self.fillFormFromlinkedShipForms()
     # addShipFmToHBL
 
+    def addContainerToHBL(self):
+        Contnr_str, ok = QInputDialog.getText(self,
+            'Enter Containers', 'Enter Container Numbers to add, separated by commas\n(warning: no exception checking)',
+            )
+        if not ok:
+            return
+        Contnr_list = ''.join(Contnr_str.split()).split(',')
+        for s in Contnr_list:
+            cntrRec = Containers.objects.filter(ContainerNumber=s).first()
+            # check if not exists
+            if not cntrRec:
+                # offer to add
+                ans = QMessageBox.question(
+                    self, 
+                    "Create Container?", f'Container {s} does not exist. Create it?\n(if you do, don\'t forget to edit it)',
+                    QMessageBox.StandardButton.Yes|QMessageBox.StandardButton.No,
+                    QMessageBox.StandardButton.No
+                    )
+                if ans == QMessageBox.StandardButton.No:
+                    continue
+                else:
+                    cntrRec = Containers.objects.create(ContainerNumber=s, HBL=self.currRec, notes='')
+                #endif ans == No
+            # endif not sfRec
+            
+        # rebuild PO list
+        self.fillFormFromlinkedContainers()
+    # addShipFmToHBL
+
 
     ##########################################
     ########    Create
@@ -668,7 +720,8 @@ class HBLForm(QWidget):
     
     def fillFormFromlinkedContainers(self):
         cRec = self.currRec
-        self.linkedRecs['Containers'] = Containers.objects.filter(HBL=cRec)
+        # self.linkedRecs['Containers'] = Containers.objects.filter(HBL=cRec)
+        self.linkedRecs['Containers'] = cRec.containers_set.all()
         qmodel = QModelContainers({'HBL': cRec})
         self.tblViewContainers.setModel(qmodel)
     
@@ -680,7 +733,8 @@ class HBLForm(QWidget):
     
     def fillFormFromlinkedInvoices(self):
         cRec = self.currRec
-        self.linkedRecs['Invoices'] = Invoices.objects.filter(HBL=cRec)
+        # self.linkedRecs['Invoices'] = Invoices.objects.filter(HBL=cRec)
+        self.linkedRecs['Invoices'] = cRec.invoices_set.all()
         qmodel = QModelInvoices({'HBL': cRec})
         self.tblViewInvoices.setModel(qmodel)
         self.InvcRecSet.init_recSet()
@@ -691,11 +745,11 @@ class HBLForm(QWidget):
     def fillFormFromlinkedrefs(self):
         cRec = self.currRec
         # fill references
-        Q1 = Q(table_ref=refs.refTblChoices.Containers) & Q(record_ref__in=self.linkedRecs['Containers'].values_list('pk'))
-        Q2 = Q(table_ref=refs.refTblChoices.HBL) & Q(record_ref=cRec.pk)
-        Q3 = Q(table_ref=refs.refTblChoices.Invoices) & Q(record_ref__in=self.linkedRecs['Invoices'].values_list('pk'))
-        Q4 = Q(table_ref=refs.refTblChoices.ShippingForms) & Q(record_ref__in=self.linkedRecs['ShippingForms'].values_list('pk'))
-        reflist = all_references().filter(Q1 | Q2 | Q3 | Q4)
+        Q1 = Q(Container__in=self.linkedRecs['Containers'].values_list('pk'))
+        Q2 = Q(HBL=cRec.pk)
+        Q3 = Q(Invoice__in=self.linkedRecs['Invoices'].values_list('pk'))
+        Q4 = Q(ShippingForm__in=self.linkedRecs['ShippingForms'].values_list('pk'))
+        reflist = refs.objects.filter(Q1 | Q2 | Q3 | Q4)
         self.linkedRecs['reference_ties'] = reflist
         qmodel = QModelrefs(reflist)
         self.tblViewrefs.setModel(qmodel)

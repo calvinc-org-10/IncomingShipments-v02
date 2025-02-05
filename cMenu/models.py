@@ -1,6 +1,6 @@
 
 from django.db import models
-from .menucommand_handlers import MENUCOMMANDS
+from .menucommand_constants import MENUCOMMANDS
 
 
 class menuGroups(models.Model):

@@ -19,7 +19,7 @@ from PySide6.QtSvgWidgets import QSvgWidget
 from .dbmenulist import MenuRecords
 from menuformname_viewMap import FormNameToURL_Map
 from sysver import sysver
-from .menucommand_handlers import MENUCOMMANDS, COMMANDNUMBER
+from .menucommand_constants import MENUCOMMANDS, COMMANDNUMBER
 
 # standard window and related sizes
 # copied from main app's forms module

@@ -4,7 +4,7 @@ import re
 from openpyxl import load_workbook
 from datetime import date
 from django.http import HttpResponse
-from incShip.models import HBL, ShippingForms, Containers, Invoices, references, reference_ties
+from incShip.models import HBL, ShippingForms, Containers, Invoices, references
 from incShip.models import Companies, FreightTypes
 
 from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
@@ -23,7 +23,7 @@ from PySide6.QtWidgets import (QApplication, QWidget,
     QSizePolicy, QTabWidget, QTextEdit,
     )
 
-from forms import std_popdialogsize
+from forms import std_popdialogsize, fontFormTitle
 
 class LoadHBL(QWidget):
     _linkedTables = ['ShippingForms', 'PO', 'Invoices', 'Containers', 'reference_ties']
@@ -42,11 +42,7 @@ class LoadHBL(QWidget):
         wdgt.setParent(self)
         wdgt.setObjectName(u"lblFormName")
         wdgt.setGeometry(QRect(200, 10, 319, 74))
-        #TODO: universal form title font
-        font1 = QFont()
-        font1.setFamilies([u"Century Gothic"])
-        font1.setPointSize(24)
-        wdgt.setFont(font1)
+        wdgt.setFont(fontFormTitle)
         wdgt.setFrameShape(QFrame.Shape.Panel)
         wdgt.setFrameShadow(QFrame.Shadow.Raised)
         wdgt.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -69,15 +65,13 @@ class LoadHBL(QWidget):
    # retranslateUi
 
     def load_recs(self):
-        fName = f'W:\\Logistics\\Invoices\\Invoices.xlsx'
-        shtName = 'HBL heads-ups'
+        fName = f'W:\\Logistics\\Invoices\\Invoices.xlsx'   #TODO: put this on form
+        shtName = 'HBL heads-ups'                           #TODO: put this on form
         wb = load_workbook(filename=fName, read_only=True)
         ws = wb[shtName]
         
-        HBL_spsht = ws
-        
         process_flag = False
-        import_spsht_prfx='SpSht.Import.2024-12-28'
+        import_spsht_prfx='SpSht.Import'
         sentinel_col, sentinel_flag = ('LstDigChk', 'RESTART')
         
         colmnNames = ws[1]
@@ -85,11 +79,12 @@ class LoadHBL(QWidget):
         SSName_TableName_map = {
             sentinel_col: None ,         # used only to find the sentinel
             'HBL': 'HBLNumber', 
-            'sh fm': None,              # mod/create ShippingForm
-            'container num': None,      # mod/create a Container
+            'sh fm': 'ShippingForm',              # mod/create ShippingForm
+            'container num': 'Container',      # mod/create a Container
             'mode': 'FreightType', 
             'origin': 'Origin', 
             'notes': 'notes',           # in the refs table
+            'Pickup dt': 'PickupDt', 
             'ETA ORD or MKE': 'ETA', 
             'Deliv appt': 'DelivAppt',  # in Containers table
             'LFD': 'LFD',               # in HBL AND CXontainers
@@ -127,13 +122,12 @@ class LoadHBL(QWidget):
         for row in ws.iter_rows(min_row=SprshtRowNum+1, values_only=True):
             SprshtRowNum += 1
             
-            if not process_flag:
-                if row[colmnMap[sentinel_col]] == sentinel_flag:
-                    process_flag = True
+            if not process_flag or row[colmnMap[sentinel_col]] == sentinel_flag:
+                process_flag = True
                 continue
             # endif process_flag
-
             
+
             HBLNum = row[colmnMap['HBL']]
             ShFm = row[colmnMap['sh fm']]
             ContNum = row[colmnMap['container num']]
@@ -143,41 +137,43 @@ class LoadHBL(QWidget):
             if InvNum:
                 if re.match(r'bill.*', InvNum): InvNum = None
 
+            PkupDt = row[colmnMap['Pickup dt']]
             ETA = row[colmnMap['ETA ORD or MKE']]
+            DelivAppt = row[colmnMap['Deliv appt']]
             LFD = row[colmnMap['LFD']]
             #create records
             HBLrec = None
             if HBLNum:
-                HBLrec, creatFlag =  HBL.objects.get_or_create(HBLNumber = HBLNum)
+                HBLrec, creatFlag =  HBL.objects.get_or_create(HBLNumber = HBLNum, defaults={'notes': ''})
                 HBLrec.Company = Company
-                if ETA:
-                    HBLrec.ETA = ETA
-                if LFD:
-                    HBLrec.LFD = LFD
-                HBLrec.save()
-            ShFmrec = None
-            if ShFm:
-                ShFmrec, creatFlag = ShippingForms.objects.get_or_create(id_SmOffFormNum = ShFm)
-            Contrec = None
-            if ContNum:
-                Contrec, creatFlag = Containers.objects.get_or_create(ContainerNumber = ContNum)
-                Contrec.DelivAppt = row[colmnMap['Deliv appt']]
-                if LFD:
-                    Contrec.LFD = LFD
-                Contrec.save()
-            Invrec = None
-            if InvNum and HBLNum:
-                FType = FreightTypes.objects.get(pk=1)
+                if PkupDt: HBLrec.PickupDt = PkupDt
+                if ETA: HBLrec.ETA = ETA
+                if LFD: HBLrec.LFD = LFD
+                FType = FreightTypes.objects.first()
                 v = row[colmnMap['mode']]
                 if v:
                     if re.search(r'air', v,re.IGNORECASE): FType = FreightTypes.objects.filter(FreightType__icontains='air').first()
                     if re.search(r'ocean', v, re.IGNORECASE): FType = FreightTypes.objects.filter(FreightType__icontains='ocean').first()
+                HBLrec.FreightType = FType
+                HBLrec.save()
+            ShFmrec = None
+            if ShFm:
+                ShFmrec, creatFlag = ShippingForms.objects.get_or_create(id_SmOffFormNum = ShFm, defaults={'notes': ''})
+            Contrec = None
+            if ContNum:
+                Contrec, creatFlag = Containers.objects.get_or_create(ContainerNumber = ContNum, defaults={'notes': ''})
+                if DelivAppt: Contrec.DelivAppt = DelivAppt
+                if LFD: Contrec.LFD = LFD
+                Contrec.save()
+            Invrec = None
+            if InvNum and HBLNum:
                 Invrec, creatFlag = Invoices.objects.get_or_create(InvoiceNumber=InvNum,
                     defaults= {
                         'HBL':HBLrec,
                         'SmOffStatus': Invoices.SmOffStatusCodes.PENDING,
                         'InvoiceDate': date.today(),
                         'InvoiceAmount': 0,
+                        'notes': '',
                     }
                 )
                 Invrec.verifiedForFii = True
@@ -194,27 +190,17 @@ class LoadHBL(QWidget):
             noterec = None
             if row[colmnMap['notes']]:
                 noterec, creatFlag = references.objects.get_or_create(
-                    emaildatefrom_or_filelocation = f'{import_spsht_prfx}.{SprshtRowNum}',
+                    refName = f'{import_spsht_prfx}.{SprshtRowNum}',
                     defaults={
                         'notes': row[colmnMap['notes']]
                     }
                 )
-                if HBLrec:
-                    reference_ties.objects.get_or_create(email=noterec, 
-                                table_ref=reference_ties.refTblChoices.HBL,
-                                record_ref=HBLrec.pk)
-                if ShFmrec:
-                    reference_ties.objects.get_or_create(email=noterec, 
-                                table_ref=reference_ties.refTblChoices.ShippingForms,
-                                record_ref=ShFmrec.pk)
-                if Contrec:
-                    reference_ties.objects.get_or_create(email=noterec, 
-                                table_ref=reference_ties.refTblChoices.Containers,
-                                record_ref=Contrec.pk)
-                if Invrec:
-                    reference_ties.objects.get_or_create(email=noterec, 
-                                table_ref=reference_ties.refTblChoices.Invoices,
-                                record_ref=Invrec.pk)
+                if HBLrec: noterec.HBL = HBLrec
+                if ShFmrec: noterec.ShippingForm = ShFmrec
+                if Contrec: noterec.Container = Contrec
+                if Invrec: noterec.Invoice = Invrec
+                noterec.save()
+
             self.lblStatus.setText(f'{SprshtRowNum}, {row}, {HBLNum}, {ShFm}, {ContNum}, {InvNum} processed')
 
         self.lblStatus.setText('Data pulled from spreadsheet')

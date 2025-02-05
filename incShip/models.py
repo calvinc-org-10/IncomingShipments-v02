@@ -5,8 +5,10 @@ from datetime import datetime, date
 
 from django.db import models
 from django.db.models import Q, F, Value
+
 from PySide6.QtCore import QAbstractTableModel, Qt, QModelIndex
 
+from cMenu.utils import QDjangoTableModel
 
 # standard sizes for decimal fields
 HunThouMoney2Dec = {'max_digits':  8, 'decimal_places': 2}
@@ -26,69 +28,6 @@ def strYMD_to_date(value):
     return datetime.strptime(value, '%Y-%m-%d').date()
 
 # for converting Django models to Qt models
-class QDjangoTableModel(QAbstractTableModel):
-    def __init__(self, tbl:models.Model, flds:List, foreign_keys:List = [], special_processing_flds:Dict[str,Tuple[Callable, Callable]] = {}, filter:Dict[str,Any] = {}, parent = None):
-        super().__init__(parent)
-        self.headers = flds
-        self.queryset = list(tbl.objects.filter(**filter).only(*flds))
-        self.foreign_keys = foreign_keys
-        self.special_processing = special_processing_flds
-
-    
-    def rowCount(self, parent = QModelIndex()):
-        return len(self.queryset)
-    
-    def columnCount(self, parent = QModelIndex()):
-        return len(self.headers)
-    
-    def data(self, index, role = Qt.DisplayRole):
-        if not index.isValid():
-            return None
-        if role == Qt.ItemDataRole.DisplayRole:
-            rec = self.queryset[index.row()]
-            fldName = self.headers[index.column()]
-            value = getattr(rec, fldName, '')
-            if fldName in self.foreign_keys:
-                value = str(value) if value else ''
-            elif fldName in self.special_processing:
-                formatter, _ = self.special_processing[fldName]
-                if callable(formatter):
-                    return formatter(value)
-            # endif special field values
-
-            return value
-        # endif role
-        return None
-
-    def setData(self, index, value, role=Qt.EditRole):
-        if not index.isValid():
-            return False
-        if role == Qt.EditRole:
-            rec = self.queryset[index.row()]
-            fldName = self.headers[index.column()]
-
-            # Apply special processing for editing if defined
-            if fldName in self.special_processing:
-                _, editor = self.special_processing[fldName]
-                if callable(editor):
-                    value = editor(value)
-
-            # Set the field value
-            setattr(rec, fldName, value)
-            rec.save()
-            return True
-        return False
-
- 
-    def headerData(self, section, orientation, role = Qt.DisplayRole):
-        if role == Qt.DisplayRole:
-            if orientation == Qt.Orientation.Horizontal:
-                return self.headers[section]
-            elif orientation == Qt.Orientation.Vertical:
-                return str(section+1)
-            #endif orientation
-        # endif role
-        return None
 
 
 # I'm quite happy with automaintained pk fields, so I don't specify any (in most cases)
@@ -273,6 +212,7 @@ class HBL(models.Model):
     FreightType = models.ForeignKey(FreightTypes, models.RESTRICT, blank=True, null=True)
     Origin = models.ForeignKey(Origins, models.RESTRICT, null=True, blank=True)
     incoterm = models.CharField(max_length=30, blank=True)
+    PickupDt = models.DateField(null=True, blank=True)
     ETA = models.DateField(null=True, blank=True)
     LFD = models.DateField(null=True, blank=True)
     ChargeableWeight = models.FloatField(null=True, blank=True)
@@ -302,6 +242,7 @@ class QModelHBL(QDjangoTableModel):
             'FreightType',
             'Origin',
             'incoterm',
+            'PickupDt',
             'ETA',
             'LFD',
             'ChargeableWeight',
@@ -374,65 +315,59 @@ class QModelInvoices(QDjangoTableModel):
 ###########################################################
 
 class references(models.Model):
-    # do I need a distinguisher between emails and files?
-    emaildatefrom_or_filelocation = models.CharField(max_length=255, blank=False, unique=True)
-    FilePath = models.FilePathField("W:\\", path=None, match=None, recursive=True, allow_folders=False, max_length=150,db_default='')
-    notes = models.TextField(blank=True)
-    
-    def __str__(self) -> str:
-        return f'{self.emaildatefrom_or_filelocation}'
-        # return super().__str__()
-class reference_ties(models.Model):
     class refTblChoices(models.TextChoices):
         Invoices      = 'INVC',  'Invoice'
         ShippingForms = 'SHPFM', 'Shipping Form'
         HBL           = 'HBL', 'HBL'          
         Containers    = 'CNTNR', 'Container'
-    email = models.ForeignKey(references,models.CASCADE)
-    table_ref = models.CharField(max_length=5, choices=refTblChoices, blank=True)
-    record_ref = models.IntegerField(null=True, blank=True)
-
-    class Meta:
-        constraints = [
-                models.UniqueConstraint(fields=['email', 'table_ref', 'record_ref'], name="references_unq_ref_tref_recref"),
-            ]
-def all_references() -> models.QuerySet:
-    # filters will most likely be complex, with muliple Q ors and ands.
-    # let the caller have all the records and then fiter
-    return reference_ties.objects.select_related('email')\
-        .annotate(
-            notes=F('email__notes'), 
-            FilePath=F('email__FilePath'), 
-            record_name=Value('')
-            )
+    # do I need a distinguisher between emails and files?
+    refName = models.CharField(max_length=255, blank=False, unique=True)
+    HBL = models.ForeignKey(HBL, models.RESTRICT, null=True, blank=True)
+    ShippingForm = models.ForeignKey(ShippingForms, models.RESTRICT, null=True, blank=True)
+    Invoice = models.ForeignKey(Invoices, models.RESTRICT, null=True, blank=True)
+    Container = models.ForeignKey(Containers, models.RESTRICT, null=True, blank=True)
+    FilePath = models.FilePathField("W:\\", path=None, match=None, recursive=True, allow_folders=False, max_length=150,db_default='')
+    notes = models.TextField(blank=True, db_default='')
+    
+    def __str__(self) -> str:
+        return f'{self.refName}'
+        # return super().__str__()
 class QModelrefs(QDjangoTableModel):
     special_processing = {}
     def __init__(self, tbl, parent=None):
         # note: tbl will come in pre-joined and pre-filtered
         QAbstractTableModel.__init__(self)    # we need to skip over the QDjangoTableModel init; it's not designed for this weird join
+        # TODO: look at QDjangoTableModel now that refs is fixed
+        # Can't flds come from the rs now?
         flds = [
             'id', 
-            'email',
-            'table_ref',
-            'record_ref',
-            'record_name',
+            'refName',
+            'HBL',
+            'HBLrecord_name',
+            'ShippingForm',
+            'ShippingFormrecord_name',
+            'Invoice',
+            'Invoicerecord_name',
+            'Container',
+            'Containerrecord_name',
             'FilePath',
             'notes',
             ]
-        foreign_keys = ['email', 'table_ref', ]
+        foreign_keys = [ ]
 
         # later, convert the record_ref to the keyvalue
         
         self.headers = flds
-        for rec in tbl:
-            if rec.table_ref == reference_ties.refTblChoices.Containers:
-                rec.record_name = str(Containers.objects.get(pk=rec.record_ref))
-            if rec.table_ref == reference_ties.refTblChoices.HBL:
-                rec.record_name = str(HBL.objects.get(pk=rec.record_ref))
-            if rec.table_ref == reference_ties.refTblChoices.Invoices:
-                rec.record_name = str(Invoices.objects.get(pk=rec.record_ref))
-            if rec.table_ref == reference_ties.refTblChoices.ShippingForms:
-                rec.record_name = str(ShippingForms.objects.get(pk=rec.record_ref))
+        # this can be in the recordset now, right?
+        # for rec in tbl:
+        #     if rec.table_ref == reference_ties.refTblChoices.Containers:
+        #         rec.record_name = str(Containers.objects.get(pk=rec.record_ref))
+        #     if rec.table_ref == reference_ties.refTblChoices.HBL:
+        #         rec.record_name = str(HBL.objects.get(pk=rec.record_ref))
+        #     if rec.table_ref == reference_ties.refTblChoices.Invoices:
+        #         rec.record_name = str(Invoices.objects.get(pk=rec.record_ref))
+        #     if rec.table_ref == reference_ties.refTblChoices.ShippingForms:
+        #         rec.record_name = str(ShippingForms.objects.get(pk=rec.record_ref))
 
         # from django.apps import apps
 
