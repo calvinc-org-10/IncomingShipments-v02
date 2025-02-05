@@ -20,6 +20,7 @@ from .dbmenulist import MenuRecords
 from menuformname_viewMap import FormNameToURL_Map
 from sysver import sysver
 from .menucommand_constants import MENUCOMMANDS, COMMANDNUMBER
+from . import menucommand_handlers
 
 # standard window and related sizes
 # copied from main app's forms module
@@ -194,9 +195,18 @@ class cMenu(QWidget):
         #    return
             # fn = getattr(menucommand_handlers, CommandArg)
             # retHTTP = fn(req)
-        # elif MENUCOMMANDS.get(CommandNum) == 'RunSQLStatement':
-        #     return
-            # return redirect('RunSQL')
+        elif MENUCOMMANDS.get(CommandNum) == 'RunSQLStatement':
+            try:
+                fn = menucommand_handlers.cMRunSQL
+                viewExists = True
+            except NameError:
+                viewExists = False
+            #end try
+            if viewExists:
+                self.open_childScreen('RunSQL', fn())
+            else:  
+                formname = f'{formname} exists but view menucommand_handlers.cMRunSQL'
+            #endif
         # elif MENUCOMMANDS.get(CommandNum) == 'ConstructSQLStatement':
         #    pass
         # elif MENUCOMMANDS.get(CommandNum)  == 'LoadExtWebPage':

@@ -18,7 +18,7 @@ class MainScreen(QWidget):
         # scroll_area.setWidgetResizable(True)
 
         self.theMenu = cMenu(self)
-        self.theMenu.loadMenu(5, 5) #FIX cMenu!!
+        # self.theMenu.loadMenu(5, 5) #FIX cMenu!!
         # scroll_area.setWidget(self.theMenu)
 
         self.retranslateUi()

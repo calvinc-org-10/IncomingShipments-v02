@@ -4,17 +4,18 @@ from django import db
 from django.db.backends.utils import CursorWrapper
 
 from PySide6.QtCore import (Qt, QObject, QAbstractTableModel, QModelIndex, )
-from PySide6.QtGui import (QFont, )
-from PySide6.QtWidgets import (
-    QWidget, QGridLayout, QHBoxLayout, QVBoxLayout, QFrame, 
+from PySide6.QtGui import (QFont, QIcon, )
+from PySide6.QtWidgets import ( QStyle, 
+    QWidget, QGridLayout, QHBoxLayout, QVBoxLayout, QFormLayout, QFrame, 
     QTableView, QHeaderView,
     QDialog, QMessageBox, 
     QTextEdit, QPushButton, QDialogButtonBox, QLabel, 
     QSizePolicy, 
     )
 
-from kls_cMenu import cMenu
-from utils import Excelfile_fromqs, dictfetchall
+# there's no need to import cMenu, plus it's a circular ref - cMenu depends heavily on this module
+# from .kls_cMenu import cMenu 
+from .utils import Excelfile_fromqs, dictfetchall, pleaseWriteMe
 
 fontFormTitle = QFont()
 fontFormTitle.setFamilies([u"Copperplate Gothic"])
@@ -30,46 +31,74 @@ def MenuCreate():
 def MenuRemove():
     ...
 
+class QWGetSQL(QWidget):
+    def __init__(self, parent = None):
+        super().__init__(parent)
+
+        # self.resize(std_windowsize.width(), std_windowsize.height()+150) # this is a temporary fix
+        font = QFont()
+        font.setPointSize(12)
+        self.setFont(font)
+        
+        self.layoutForm = QVBoxLayout(self)
+        
+        # self.layoutwidgetFormHdr = QWidget()
+        self.layoutFormHdr = QVBoxLayout()
+        
+        self.lblFormName = QLabel()
+        self.lblFormName.setFont(fontFormTitle)
+        self.lblFormName.setFrameShape(QFrame.Shape.Panel)
+        self.lblFormName.setFrameShadow(QFrame.Shadow.Raised)
+        self.lblFormName.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.lblFormName.setWordWrap(True)
+        self.lblFormName.setText(self.tr('Enter SQL'))
+        self.layoutFormHdr.addWidget(self.lblFormName)
+        self.layoutFormHdr.addSpacing(20)
+        
+        # main area for entering SQL
+        self.layoutFormMain = QFormLayout()
+        self.txtedSQL = QTextEdit()
+        self.layoutFormMain.addRow(self.tr('SQL statement'), self.txtedSQL)
+        
+        # run/Cancel buttons
+        self.layoutFormActionButtons = QHBoxLayout()
+        self.buttonRunSQL = QPushButton( QIcon.fromTheme(QIcon.ThemeIcon.Computer), self.tr('Run SQL') ) 
+        self.buttonRunSQL.clicked.connect(lambda: pleaseWriteMe(self,'buttonRunSQL.clicked.connect') )
+        self.layoutFormActionButtons.addWidget(self.buttonRunSQL, alignment=Qt.AlignmentFlag.AlignRight)
+        self.buttonCancel = QPushButton( QIcon.fromTheme('dialog-cancel'), self.tr('Cancel') ) 
+        self.buttonCancel.clicked.connect(lambda: pleaseWriteMe(self,'buttonCancel.clicked.connect'))
+        self.layoutFormActionButtons.addWidget(self.buttonCancel, alignment=Qt.AlignmentFlag.AlignRight)
+        
+        # generic horizontal lines
+        horzline = QFrame()
+        horzline.setFrameShape(QFrame.Shape.HLine)
+        horzline.setFrameShadow(QFrame.Shadow.Sunken)
+        horzline2 = QFrame()
+        horzline2.setFrameShape(QFrame.Shape.HLine)
+        horzline2.setFrameShadow(QFrame.Shadow.Sunken)
+        
+        # status message
+        self.lblStatusMsg = QLabel()
+        self.lblStatusMsg.setText('\n\n')
+        
+        # Hints
+        self.lblHints = QLabel()
+        self.lblHints.setText('db hints will go here ...')
+        
+        self.layoutForm.addLayout(self.layoutFormHdr)
+        self.layoutForm.addLayout(self.layoutFormMain)
+        self.layoutForm.addLayout(self.layoutFormActionButtons)
+        self.layoutForm.addWidget(horzline)
+        self.layoutForm.addWidget(self.lblStatusMsg)
+        self.layoutForm.addWidget(horzline2)
+        self.layoutForm.addWidget(self.lblHints)
+        
+    
+#class cMRunSQL_THE_REAL_ONE(QWidget):
 class cMRunSQL(QWidget):
-    wndwGetSQL:QWidget = None
-    wndwShowSQL:QWidget = None
-    inputSQL:str = ''
-    cntext:Dict = {}    # holdover from django client-server apps
+    # wndwGetSQL:QWidget = None
+    # wndwShowSQL:QWidget = None
 
-    class QWGetSQL(QWidget):
-        def __init__(self, parent = None):
-            super().__init__(parent)
-
-            # self.resize(std_windowsize.width(), std_windowsize.height()+150) # this is a temporary fix
-            font = QFont()
-            font.setPointSize(12)
-            self.setFont(font)
-            
-            self.layoutForm = QVBoxLayout(self)
-            
-            thisWindowsize = self.size()
-
-            # self.layoutwidgetFormHdr = QWidget()
-            self.layoutFormHdr = QVBoxLayout()
-            
-            self.lblFormName = QLabel(self)
-            wdgt = self.lblFormName
-            wdgt.setFont(fontFormTitle)
-            wdgt.setFrameShape(QFrame.Shape.Panel)
-            wdgt.setFrameShadow(QFrame.Shadow.Raised)
-            wdgt.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            wdgt.setWordWrap(True)
-            wdgt.setText(self.tr('Enter SQL'))
-            self.layoutFormHdr.addWidget(wdgt,0,0)
-            self.layoutFormHdr.addSpacing(20)
-            self.layoutForm.addLayout(self.layoutFormHdr)
-            
-            # main area for entering SQL
-            
-            # run/Cancel buttons
-            
-            # Hints
-            
     class QRawSQLTableModel(QAbstractTableModel):
         def __init__(self, cursor:CursorWrapper, colNames:List[str], parent:QObject = None):
             super().__init__(parent)
@@ -111,7 +140,13 @@ class cMRunSQL(QWidget):
         super().__init__(parent)
         
         # create windows
-        # present wndwGetSQL
+        self.wndwGetSQL = QWGetSQL(parent)
+        self.wndwGetSQL.setAttribute(Qt.WA_DeleteOnClose)
+
+        # they get shown at self.show()
+
+    def show(self):
+        self.wndwGetSQL.show()
         
     def fn_cRawSQL_exec(self):
         cntext = []
