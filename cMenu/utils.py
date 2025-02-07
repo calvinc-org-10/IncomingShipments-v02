@@ -485,7 +485,7 @@ def Excelfile_fromqs(qset:QuerySet|List[Dict[str, Any]], flName:str|None = None,
             ws.append(list(row.values()))
 
         # make header row bold, shade it grey, freeze it
-        ws.show_gridlines = True  #TODO: Find out how to do this if this doesn't work
+        # ws.show_gridlines = True  #Nope - this is a R/O attribute
         for cell in ws[1]:
             cell.font = Font(bold=True)
             cell.fill = PatternFill(fill_type=fills.FILL_SOLID,

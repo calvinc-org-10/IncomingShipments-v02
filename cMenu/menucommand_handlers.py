@@ -1,21 +1,23 @@
-from typing import (Dict, List, )
+from typing import (Dict, List, Any, )
 
 from django import db
 from django.db.backends.utils import CursorWrapper
 
-from PySide6.QtCore import (Qt, QObject, QAbstractTableModel, QModelIndex, )
+from PySide6.QtCore import (Qt, QObject,
+    Signal, Slot, 
+    QAbstractTableModel, QModelIndex, )
 from PySide6.QtGui import (QFont, QIcon, )
 from PySide6.QtWidgets import ( QStyle, 
     QWidget, QGridLayout, QHBoxLayout, QVBoxLayout, QFormLayout, QFrame, 
     QTableView, QHeaderView,
-    QDialog, QMessageBox, 
-    QTextEdit, QPushButton, QDialogButtonBox, QLabel, 
+    QDialog, QMessageBox, QFileDialog, 
+    QTextEdit, QPushButton,  QLabel, 
     QSizePolicy, 
     )
 
 # there's no need to import cMenu, plus it's a circular ref - cMenu depends heavily on this module
 # from .kls_cMenu import cMenu 
-from .utils import Excelfile_fromqs, dictfetchall, pleaseWriteMe
+from .utils import (Excelfile_fromqs, ExcelWorkbook_fileext, dictfetchall, )
 
 fontFormTitle = QFont()
 fontFormTitle.setFamilies([u"Copperplate Gothic"])
@@ -31,18 +33,56 @@ def MenuCreate():
 def MenuRemove():
     ...
 
+class QRawSQLTableModel(QAbstractTableModel):
+    def __init__(self, rows:List[Dict[str,Any]], colNames:List[str], parent:QObject = None):
+        super().__init__(parent)
+        self.headers = colNames
+        self.queryset = rows
+    
+    def rowCount(self, parent = QModelIndex()):
+        return len(self.queryset)
+    
+    def columnCount(self, parent = QModelIndex()):
+        return len(self.headers)
+    
+    def data(self, index, role = Qt.DisplayRole):
+        if not index.isValid():
+            return None
+        if role == Qt.ItemDataRole.DisplayRole:
+            rec = self.queryset[index.row()]
+            fldName = self.headers[index.column()]
+            value = rec[fldName]
+
+            return value
+        # endif role
+        return None
+
+    # not editable - don't need setData
+
+    def headerData(self, section, orientation, role = Qt.DisplayRole):
+        if role == Qt.DisplayRole:
+            if orientation == Qt.Orientation.Horizontal:
+                return self.headers[section]
+            elif orientation == Qt.Orientation.Vertical:
+                return str(section+1)
+            #endif orientation
+        # endif role
+        return None
+
 class QWGetSQL(QWidget):
+    runSQL = Signal(str)    # Emitted with the SQL string when run is clicked
+    cancel = Signal()       # Emitted when cancel is clicked    
+    
     def __init__(self, parent = None):
         super().__init__(parent)
 
-        # self.resize(std_windowsize.width(), std_windowsize.height()+150) # this is a temporary fix
         font = QFont()
         font.setPointSize(12)
         self.setFont(font)
         
         self.layoutForm = QVBoxLayout(self)
         
-        # self.layoutwidgetFormHdr = QWidget()
+        # Form Header Layout
         self.layoutFormHdr = QVBoxLayout()
         
         self.lblFormName = QLabel()
@@ -52,6 +92,7 @@ class QWGetSQL(QWidget):
         self.lblFormName.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.lblFormName.setWordWrap(True)
         self.lblFormName.setText(self.tr('Enter SQL'))
+        self.setWindowTitle(self.tr('Enter SQL'))
         self.layoutFormHdr.addWidget(self.lblFormName)
         self.layoutFormHdr.addSpacing(20)
         
@@ -63,10 +104,10 @@ class QWGetSQL(QWidget):
         # run/Cancel buttons
         self.layoutFormActionButtons = QHBoxLayout()
         self.buttonRunSQL = QPushButton( QIcon.fromTheme(QIcon.ThemeIcon.Computer), self.tr('Run SQL') ) 
-        self.buttonRunSQL.clicked.connect(lambda: pleaseWriteMe(self,'buttonRunSQL.clicked.connect') )
+        self.buttonRunSQL.clicked.connect(self._on_run_sql_clicked)
         self.layoutFormActionButtons.addWidget(self.buttonRunSQL, alignment=Qt.AlignmentFlag.AlignRight)
-        self.buttonCancel = QPushButton( QIcon.fromTheme('dialog-cancel'), self.tr('Cancel') ) 
-        self.buttonCancel.clicked.connect(lambda: pleaseWriteMe(self,'buttonCancel.clicked.connect'))
+        self.buttonCancel = QPushButton( QIcon.fromTheme(QIcon.ThemeIcon.WindowClose), self.tr('Cancel') ) 
+        self.buttonCancel.clicked.connect(self._on_cancel_clicked)
         self.layoutFormActionButtons.addWidget(self.buttonCancel, alignment=Qt.AlignmentFlag.AlignRight)
         
         # generic horizontal lines
@@ -93,98 +134,72 @@ class QWGetSQL(QWidget):
         self.layoutForm.addWidget(horzline2)
         self.layoutForm.addWidget(self.lblHints)
         
+    def _on_run_sql_clicked(self):
+        # Emit the runSQL signal with the text from the editor.
+        sql_text = self.txtedSQL.toPlainText()
+        self.runSQL.emit(sql_text)
+
+    def _on_cancel_clicked(self):
+        # Emit the cancel signal.
+        self.cancel.emit()        
+
+    def closeEvent(self, event):
+        self.cancel.emit()  # Emit the signal
+        event.accept()  # Accept the close event (allows the window to close)
+
+class QWShowSQL(QWidget):
+    ReturnToSQL = Signal()
+    closeMe = Signal()
+    closeBoth = Signal()
     
-#class cMRunSQL_THE_REAL_ONE(QWidget):
-class cMRunSQL(QWidget):
-    # wndwGetSQL:QWidget = None
-    # wndwShowSQL:QWidget = None
-
-    class QRawSQLTableModel(QAbstractTableModel):
-        def __init__(self, cursor:CursorWrapper, colNames:List[str], parent:QObject = None):
-            super().__init__(parent)
-            self.headers = colNames
-            self.queryset = dictfetchall(cursor)
-        
-        def rowCount(self, parent = QModelIndex()):
-            return len(self.queryset)
-        
-        def columnCount(self, parent = QModelIndex()):
-            return len(self.headers)
-        
-        def data(self, index, role = Qt.DisplayRole):
-            if not index.isValid():
-                return None
-            if role == Qt.ItemDataRole.DisplayRole:
-                rec = self.queryset[index.row()]
-                fldName = self.headers[index.column()]
-                value = rec[fldName]
-
-                return value
-            # endif role
-            return None
-
-        # not editable - don't need setData
-    
-        def headerData(self, section, orientation, role = Qt.DisplayRole):
-            if role == Qt.DisplayRole:
-                if orientation == Qt.Orientation.Horizontal:
-                    return self.headers[section]
-                elif orientation == Qt.Orientation.Vertical:
-                    return str(section+1)
-                #endif orientation
-            # endif role
-            return None
-
-    
-    def __init__(self, parent = None):
+    def __init__(self, origSQL:str, rows:List[Dict[str, Any]], colNames:str|List[str], parent:QWidget = None):
         super().__init__(parent)
+
+        # save incoming for future use if needed
+        self.origSQL = origSQL
+        self.rows = rows
+        self.colNames = colNames
+
+        font = QFont()
+        font.setPointSize(12)
+        self.setFont(font)
         
-        # create windows
-        self.wndwGetSQL = QWGetSQL(parent)
-        self.wndwGetSQL.setAttribute(Qt.WA_DeleteOnClose)
-
-        # they get shown at self.show()
-
-    def show(self):
-        self.wndwGetSQL.show()
+        self.layoutForm = QVBoxLayout(self)
         
-    def fn_cRawSQL_exec(self):
-        cntext = []
-        ...
-        # build form -> inputSQL
-        sqlerr = None
-        with db.connection.cursor() as cursor:
-            try:
-                cursor.execute(self.inputSQL)
-            except Exception as err:
-                sqlerr = err
-        if not sqlerr:
-            colNames = []
-            if cursor.description:
-                colNames = [col[0] for col in cursor.description]
-                #rows = dictfetchall(cursor)
-                cntext['colNames'] = colNames
-                cntext['nRecs'] = cursor.rowcount
-                cntext['SQLresults'] = cursor
+        # Form Header Layout
+        self.layoutFormHdr = QVBoxLayout()
+        
+        self.lblFormName = QLabel()
+        self.lblFormName.setFont(fontFormTitle)
+        self.lblFormName.setFrameShape(QFrame.Shape.Panel)
+        self.lblFormName.setFrameShadow(QFrame.Shadow.Raised)
+        self.lblFormName.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.lblFormName.setWordWrap(True)
+        self.lblFormName.setText(self.tr('SQL Results'))
+        self.setWindowTitle(self.tr('SQL Results'))
+        
+        self.layoutFormSQLDescription = QFormLayout()
+        self.lblOrigSQL = QLabel()
+        self.lblOrigSQL.setText(origSQL)
+        self.lblnRecs = QLabel()
+        self.lblnRecs.setText(f'{len(rows)}')
+        self.lblcolNames = QLabel()
+        self.lblcolNames.setText(str(colNames))
+        self.layoutFormSQLDescription.addRow('SQL Entered:', self.lblOrigSQL)
+        self.layoutFormSQLDescription.addRow('rows affctd:', self.lblnRecs)
+        self.layoutFormSQLDescription.addRow('cols:', self.lblcolNames)
+        
+        self.layoutFormHdr.addWidget(self.lblFormName)
+        self.layoutFormHdr.addSpacing(20)
+        self.layoutFormHdr.addWidget(self.lblOrigSQL)
+        self.layoutFormHdr.addWidget(self.lblnRecs)
+        self.layoutFormHdr.addWidget(self.lblcolNames)
 
-            else:
-                cntext['colNames'] = 'NO RECORDS RETURNED; ' + str(cursor.rowcount) + ' records affected'
-                cntext['nRecs'] = cursor.rowcount
-                cntext['SQLresults'] = cursor
-
-            self.fn_cRawSQL_show(cursor, colNames)
-        else:  
-            # show sqlerr in self.wndwGetSQL
-            ...
-        #endif not sqlerr
-
-    def fn_cRawSQL_show(self, cursor, colNames):
-        # close         self.wndwGetSQL
-        # present results in QTableView
-        resultModel = self.QRawSQLTableModel(cursor, colNames, self)
-        self.tblViewInvoices.setModel(resultModel)
-
-        resultTable = QTableView(self)
+        # main area for displaying SQL
+        self.layoutFormMain = QVBoxLayout()
+        
+        resultModel = QRawSQLTableModel(rows, colNames, self.parent())
+        resultTable = QTableView()
         # resultTable.verticalHeader().setHidden(True)
         header = resultTable.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
@@ -197,10 +212,138 @@ class cMRunSQL(QWidget):
             white-space: normal;  /* Allow text to wrap */
         }
         """)
-
-        ExcelFileNamePrefix = "SQLresults "
-        Excel_qdict = [{colNames[x]:cRec[x] for x in range(len(colNames))} for cRec in cursor]
-        Excelfile_fromqs(Excel_qdict)
+        resultTable.setModel(resultModel)
+        self.layoutFormMain.addWidget(resultTable)
         
-        ...
+        #  buttons
+        self.layoutFormActionButtons = QHBoxLayout()
+        self.buttonGetSQL = QPushButton( QIcon.fromTheme(QIcon.ThemeIcon.GoPrevious), self.tr('Back to SQL') ) 
+        self.buttonGetSQL.clicked.connect(self._return_to_sql)
+        self.layoutFormActionButtons.addWidget(self.buttonGetSQL, alignment=Qt.AlignmentFlag.AlignRight)
+        self.buttonDLResults = QPushButton( QIcon.fromTheme(QIcon.ThemeIcon.DocumentSave), self.tr('D/L Results') ) 
+        self.buttonDLResults.clicked.connect(self.DLResults)
+        self.layoutFormActionButtons.addWidget(self.buttonDLResults, alignment=Qt.AlignmentFlag.AlignRight)
+        self.buttonCancel = QPushButton( QIcon.fromTheme(QIcon.ThemeIcon.WindowClose), self.tr('Close') ) 
+        self.buttonCancel.clicked.connect(self._on_cancel_clicked)
+        self.layoutFormActionButtons.addWidget(self.buttonCancel, alignment=Qt.AlignmentFlag.AlignRight)
+        
+        # generic horizontal lines
+        horzline = QFrame()
+        horzline.setFrameShape(QFrame.Shape.HLine)
+        horzline.setFrameShadow(QFrame.Shadow.Sunken)
+        
+        self.layoutForm.addLayout(self.layoutFormHdr)
+        self.layoutForm.addLayout(self.layoutFormSQLDescription)
+        self.layoutForm.addLayout(self.layoutFormMain)
+        self.layoutForm.addWidget(horzline)
+        self.layoutForm.addLayout(self.layoutFormActionButtons)
 
+    @Slot()
+    def DLResults(self):
+        ExcelFileNamePrefix = "SQLresults"
+        # Excel_qdict = [{self.colNames[x]:cRec[x] for x in range(len(self.colNames))} for cRec in self.rows]
+        Excel_qdict = self.rows
+        xlws = Excelfile_fromqs(Excel_qdict)
+        filName, _ = QFileDialog.getSaveFileName(self, 
+            "Enter Spreadsheet File Name",
+            selectedFilter=f'{ExcelFileNamePrefix}*'
+        )
+        if filName:
+            xlws.save(filName)     
+        
+    def _return_to_sql(self):
+        self.ReturnToSQL.emit()
+
+    def _on_cancel_clicked(self):
+        # Emit the cancel signal.
+        self.closeBoth.emit()        
+
+    def closeEvent(self, event):
+        self.closeMe.emit()  # Emit the signal
+        event.accept()  # Accept the close event (allows the window to close)
+    
+class cMRunSQL(QWidget):
+    def __init__(self, parent = None):
+        super().__init__(parent)
+
+        self.inputSQL:str = None
+        self.rows:CursorWrapper = None
+        self.colNames:str|List[str] = None
+        self.wndwAlive:Dict[str,bool] = {}
+        
+        self.wndwGetSQL = QWGetSQL(parent)
+        self.wndwGetSQL.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+        self.wndwGetSQL.runSQL.connect(self.rawSQLexec)
+        self.wndwGetSQL.cancel.connect(self._on_cancel)
+        self.wndwAlive['Get'] = True
+        self.wndwGetSQL.destroyed.connect(lambda: self.wndwDest('Get'))
+        
+        self.wndwShowSQL = None        # will be redefined later
+
+    def wndwDest(self, whichone:str):
+        self.wndwAlive[whichone] = False
+        
+    def show(self):
+        self.wndwGetSQL.show()
+        
+    @Slot(str)
+    def rawSQLexec(self, inputSQL:str):
+        sqlerr = None
+        with db.connection.cursor() as djngocursor:
+            try:
+                djngocursor.execute(inputSQL)
+            except Exception as err:
+                sqlerr = err
+            if not sqlerr:
+                colNames = []
+                if djngocursor.description:
+                    colNames = [col[0] for col in djngocursor.description]
+                    rows = dictfetchall(djngocursor)
+                else:
+                    colNames = 'NO RECORDS RETURNED; ' + str(djngocursor.rowcount) + ' records affected'
+                    rows = []
+                #endif cursor.description
+
+                self.inputSQL = inputSQL        # preserve for later use
+                self.rows = rows                # preserve for later use
+                self.colNames = colNames        # preserve for later use
+                self.rawSQLshow()
+            else:  
+                # show sqlerr in self.wndwGetSQL
+                self.wndwGetSQL.lblStatusMsg.setText(f'ERROR: {sqlerr}')
+                # self.wndwGetSQL.repaint()
+            #endif not sqlerr
+        #end with
+
+    def rawSQLshow(self):
+        self.wndwShowSQL = QWShowSQL(self.inputSQL, self.rows, self.colNames, self.parent())
+        self.wndwShowSQL.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+        self.wndwShowSQL.ReturnToSQL.connect(self._ShowToGetSQL)
+        self.wndwShowSQL.closeBoth.connect(self._on_cancel)
+
+        self.wndwAlive['Show'] = True
+        self.wndwShowSQL.destroyed.connect(lambda: self.wndwDest('Show'))
+
+
+        self.wndwGetSQL.hide()
+        self.wndwShowSQL.show()
+
+    @Slot()
+    def _ShowToGetSQL(self):
+        if self.wndwAlive.get('Show'):
+            self.wndwShowSQL.close()
+        self.wndwGetSQL.show()
+        
+    @Slot()
+    def _on_cancel(self):
+        # Handle the cancellation by closing both windows.
+        self._close_all()
+
+    def _close_all(self):
+        # Close the child widget if it exists.
+        if self.wndwAlive.get('Get'):
+            self.wndwGetSQL.close()
+        if self.wndwAlive.get('Show'):
+            self.wndwShowSQL.close()
+        # Close this widget (cMRunSQL) as well.
+        self.close()
