@@ -17,7 +17,11 @@ from PySide6.QtWidgets import ( QStyle,
 
 # there's no need to import cMenu, plus it's a circular ref - cMenu depends heavily on this module
 # from .kls_cMenu import cMenu 
-from .utils import (Excelfile_fromqs, ExcelWorkbook_fileext, dictfetchall, )
+
+from menuformname_viewMap import FormNameToURL_Map
+
+from .utils import (Excelfile_fromqs, ExcelWorkbook_fileext, dictfetchall, QRawSQLTableModel, UnderConstruction_Dialog )
+
 
 fontFormTitle = QFont()
 fontFormTitle.setFamilies([u"Copperplate Gothic"])
@@ -32,42 +36,6 @@ def MenuCreate():
 
 def MenuRemove():
     ...
-
-class QRawSQLTableModel(QAbstractTableModel):
-    def __init__(self, rows:List[Dict[str,Any]], colNames:List[str], parent:QObject = None):
-        super().__init__(parent)
-        self.headers = colNames
-        self.queryset = rows
-    
-    def rowCount(self, parent = QModelIndex()):
-        return len(self.queryset)
-    
-    def columnCount(self, parent = QModelIndex()):
-        return len(self.headers)
-    
-    def data(self, index, role = Qt.DisplayRole):
-        if not index.isValid():
-            return None
-        if role == Qt.ItemDataRole.DisplayRole:
-            rec = self.queryset[index.row()]
-            fldName = self.headers[index.column()]
-            value = rec[fldName]
-
-            return value
-        # endif role
-        return None
-
-    # not editable - don't need setData
-
-    def headerData(self, section, orientation, role = Qt.DisplayRole):
-        if role == Qt.DisplayRole:
-            if orientation == Qt.Orientation.Horizontal:
-                return self.headers[section]
-            elif orientation == Qt.Orientation.Vertical:
-                return str(section+1)
-            #endif orientation
-        # endif role
-        return None
 
 class QWGetSQL(QWidget):
     runSQL = Signal(str)    # Emitted with the SQL string when run is clicked
@@ -347,3 +315,63 @@ class cMRunSQL(QWidget):
             self.wndwShowSQL.close()
         # Close this widget (cMRunSQL) as well.
         self.close()
+
+########################################
+########################################
+
+def FormBrowse(parntWind, formname):
+    urlIndex = 0
+    viewIndex = 1
+
+    # theForm = 'Form ' + formname + ' is not built yet.  Calvin needs more coffee.'
+    theForm = None
+    formname = formname.lower()
+    if formname in FormNameToURL_Map:
+        if FormNameToURL_Map[formname][urlIndex]:
+            # figure out how to repurpose this later
+            # url = FormNameToURL_Map[formname][urlIndex]
+            # try:
+            #     theView = resolve(reverse(url)).func
+            #     urlExists = True
+            # except (Resolver404, NoReverseMatch):
+            #     urlExists = False
+            # # end try
+            # if urlExists:
+            #     theForm = theView(req)
+            # else:
+            #     formname = f'{formname} exists but url {url} '
+            # #endif
+            pass
+        elif FormNameToURL_Map[formname][viewIndex]:
+            try:
+                fn = FormNameToURL_Map[formname][viewIndex]
+                viewExists = True
+            except NameError:
+                viewExists = False
+            #end try
+            if viewExists:
+                # dtheForm = fn(parntWind)
+                theForm = fn()
+            else:  
+                formname = f'{formname} exists but view {FormNameToURL_Map[formname][viewIndex]}'
+            #endif
+    if not theForm:
+        formname = f'Form {formname} is not built yet.  Calvin needs more coffee.'
+        # print(formname)
+        UnderConstruction_Dialog(parntWind, formname).show()
+    else:
+        # print(f'about to show {theForm}')
+        # theForm.show()
+        # print(f'done showing')
+        return theForm
+    # endif
+
+    # must be rendered if theForm came from a class-based-view
+    # if hasattr(theForm,'render'): theForm = theForm.render()
+    # return theForm
+
+def ShowTable(parntWind, tblname):
+    # showing a table is nothing more than another form
+    return FormBrowse(parntWind,tblname)
+
+

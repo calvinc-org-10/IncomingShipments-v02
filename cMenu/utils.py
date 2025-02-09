@@ -7,24 +7,33 @@ from django.db.models import (QuerySet, Model)
 from django.db.models import Aggregate, CharField
 from django.db.backends.utils import CursorWrapper
 
-from PySide6.QtCore import (QCoreApplication,
-    Qt, Slot, QObject,
-    QRect,
+from PySide6.QtCore import (QCoreApplication, 
+    QDate, QDateTime, QLocale,
+    QMetaObject, QObject, QPoint, QRect,
+    QSize, QTime, QUrl, Qt,
+    Signal, Slot, 
     QStringListModel, QAbstractTableModel, QAbstractListModel, QModelIndex,
     )
-from PySide6.QtWidgets import (QApplication, QWidget,
-    QMessageBox, 
-    QVBoxLayout, QScrollArea, QFrame, QGridLayout,
-    QLineEdit, QCompleter, 
-    QComboBox, QPushButton,
+from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
+    QFont, 
     )
-# from PySide6.QtGui import (
-#    )
+from PySide6.QtWidgets import (QApplication, QWidget, QGridLayout, QHBoxLayout, QVBoxLayout,
+    QScrollArea, QCompleter, 
+    QDialog, QMessageBox, 
+    QPushButton, QDialogButtonBox, QLabel, QFrame, QLineEdit, QCheckBox, QComboBox, 
+    QSizePolicy, 
+    )
+from PySide6.QtSvgWidgets import QSvgWidget
 
 from openpyxl import Workbook
 from openpyxl.styles import PatternFill, Font, fills, colors
 from openpyxl.utils.datetime import from_excel, WINDOWS_EPOCH
 
+
+# standard window and related sizes
+# copied from main app's forms module
+std_windowsize = QSize(1120,720)
+std_popdialogsize=QSize(400,300)
 
 ExcelWorkbook_fileext = ".XLSX"
 
@@ -567,4 +576,81 @@ class UpldSprdsheet():
 
     def process_spreadsheet(self, SprsheetName):
         pass
+
+
+class QRawSQLTableModel(QAbstractTableModel):
+    def __init__(self, rows:List[Dict[str,Any]], colNames:List[str], parent:QObject = None):
+        super().__init__(parent)
+        self.headers = colNames
+        self.queryset = rows
+    
+    def rowCount(self, parent = QModelIndex()):
+        return len(self.queryset)
+    
+    def columnCount(self, parent = QModelIndex()):
+        return len(self.headers)
+    
+    def data(self, index, role = Qt.DisplayRole):
+        if not index.isValid():
+            return None
+        if role == Qt.ItemDataRole.DisplayRole:
+            rec = self.queryset[index.row()]
+            fldName = self.headers[index.column()]
+            value = rec[fldName]
+
+            return value
+        # endif role
+        return None
+
+    # not editable - don't need setData
+
+    def headerData(self, section, orientation, role = Qt.DisplayRole):
+        if role == Qt.DisplayRole:
+            if orientation == Qt.Orientation.Horizontal:
+                return self.headers[section]
+            elif orientation == Qt.Orientation.Vertical:
+                return str(section+1)
+            #endif orientation
+        # endif role
+        return None
+
+
+###################################################
+###################################################
+###################################################
+
+
+class UnderConstruction_Dialog(QDialog):
+    def __init__(self, parent:QWidget = None, constructionMsg:str = '', f:Qt.WindowType = Qt.WindowType.Dialog):
+        super().__init__(parent, f)
+
+        if not self.objectName():
+            self.setObjectName(u"Dialog")
+        self.resize(std_popdialogsize)
+        self.setWindowTitle('Not Built Yet')
+        self.buttonBox = QDialogButtonBox(self)
+        self.buttonBox.setObjectName(u"buttonBox")
+        self.buttonBox.setGeometry(QRect(30, 260, 341, 32))
+        self.buttonBox.setOrientation(Qt.Orientation.Horizontal)
+        self.buttonBox.setStandardButtons(QDialogButtonBox.StandardButton.Ok)
+        self.buttonBox.setCenterButtons(True)
+        self.constrsign = QSvgWidget('assets/svg/under-construction-barrier-icon.svg',self)
+        self.constrsign.setObjectName(u"constrwidget")
+        self.constrsign.setGeometry(QRect(10, 60, 381, 191))
+        self.label = QLabel(self)
+        self.label.setObjectName(u"label")
+        self.label.setGeometry(QRect(10, 10, 381, 51))
+        font = QFont()
+        font.setPointSize(12)
+        font.setKerning(False)
+        self.label.setFont(font)
+        self.label.setAlignment(Qt.AlignmentFlag.AlignLeading|Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignTop)
+        self.label.setWordWrap(True)
+        self.label.setText(constructionMsg)
+
+        self.buttonBox.rejected.connect(self.reject)
+        self.buttonBox.accepted.connect(self.accept)
+
+        QMetaObject.connectSlotsByName(self)
+    # __init__
 

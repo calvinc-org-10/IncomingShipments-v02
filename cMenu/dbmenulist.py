@@ -75,7 +75,9 @@ test_menulist = [
 {'keys': {'MenuGroup': 1, 'MenuID': 6, 'OptionNumber': 3},
     'values': {'OptionText': 'load Invoices', 'Command': 11, 'Argument': 'init-load-Inv-00', 'PWord': '', 'TopLine': None, 'BottomLine': None, }},
 ]
-from django.db.models import Min
+
+
+from django.db.models import Min, QuerySet
 from .models import menuItems
 
 class MenuRecords(object):
@@ -91,7 +93,10 @@ class MenuRecords(object):
             )[0]
 
     def dfltMenuID_forGroup(self, mGroup:int) -> int:
-        return self.mSource.filter(MenuGroup=mGroup,Argument__iexact='default',OptionNumber=0).first().MenuID
+        if self.mSource.filter(MenuGroup=mGroup,Argument__iexact='default',OptionNumber=0).exists():
+            return self.mSource.filter(MenuGroup=mGroup,Argument__iexact='default',OptionNumber=0).first().MenuID
+        else:
+            return self.mSource.filter(MenuGroup=mGroup,OptionNumber=0).aggregate(mID=Min('MenuID'))['mID']
         return list(menuRec['keys']['MenuID'] \
                         for menuRec in self.mSource \
                         if menuRec['keys']['MenuGroup']==mGroup \
@@ -104,6 +109,14 @@ class MenuRecords(object):
     
     def menuDict(self, mGroup:int, mID:int) ->  Dict[int,Dict]:
         return { mRec['OptionNumber']: mRec for mRec in self.mSource.filter(MenuGroup=mGroup,MenuID=mID).values() }
+        return { mRec['keys']['OptionNumber']: mRec['values'] \
+                    for mRec in self.mSource \
+                    if mRec['keys']['MenuGroup']==mGroup \
+                        and mRec['keys']['MenuID']==mID 
+            }
+    
+    def menuDBRecs(self, mGroup:int, mID:int) ->  QuerySet:
+        return self.mSource.filter(MenuGroup=mGroup,MenuID=mID)
         return { mRec['keys']['OptionNumber']: mRec['values'] \
                     for mRec in self.mSource \
                     if mRec['keys']['MenuGroup']==mGroup \

@@ -240,6 +240,17 @@ class HBLForm(QWidget):
         wdgt.editingFinished.connect(lambda: self.changeField(self.lnedtIncoterm))
         self.layoutFormMain.addWidget(wdgt, 1, 4)
 
+        # self.dtedtPickupDt = QDateEdit(self.layoutwidgetFormMain); self.lblPickupDt = QLabel(self.layoutwidgetFormMain)
+        self.dtedtPickupDt = QDateEdit(); self.lblPickupDt = QLabel()
+        wdgt = self.dtedtPickupDt; wdgtlbl = self.lblPickupDt
+        # self.layoutFormMain.addWidget(wdgtlbl, 2, 0)
+        wdgt.setDisplayFormat(_DATE_FORMAT)
+        wdgt.setSpecialValueText('---')
+        wdgt.setProperty('field', 'PickupDt')
+        self.formFields['PickupDt'] = (wdgt, None)
+        wdgt.userDateChanged.connect(lambda: self.changeField(self.dtedtPickupDt))
+        # self.layoutFormMain.addWidget(wdgt, 3, 0)
+
         self.dtedtETA = QDateEdit(self.layoutwidgetFormMain); self.lblETA = QLabel(self.layoutwidgetFormMain)
         wdgt = self.dtedtETA; wdgtlbl = self.lblETA
         wdgtlbl.setObjectName(u"lblETA")
@@ -794,7 +805,7 @@ class HBLForm(QWidget):
             # wdgt_value = forgnModel.objects.get(pk=wdgt_value)
             dbField += '_id'
         
-        if wdgt_value:
+        if wdgt_value or isinstance(wdgt_value,bool):
             setattr(cRec, dbField, wdgt_value)
             self.setFormDirty(wdgt, True)
             return True
@@ -878,7 +889,7 @@ class Invoice_singleForm(QWidget):
             self.currRec = self.createNewRec(InvNumber=None,HBLref=HBLRec)
         #endif
         
-        self.resize(780, 190)
+        # self.resize(780, 190)
         font = QFont()
         font.setPointSize(10)
         self.setFont(font)
@@ -983,19 +994,37 @@ class Invoice_singleForm(QWidget):
         self.gridLayout.addWidget(wdgtlbl, 4, 0)
         self.gridLayout.addWidget(wdgt, 4, 1, 1, 8)
 
+        self.layoutVerified = QHBoxLayout()
         self.chkbxVerified = QCheckBox(self)
         wdgt = self.chkbxVerified
         wdgt.setObjectName(u"checkBox")
         wdgt.setProperty('field', 'verifiedForFii')
         wdgt.checkStateChanged.connect(lambda newstate: self.changeField(self.chkbxVerified))
-        self.gridLayout.addWidget(wdgt, 0, 1, 1, 2)
+        self.lnedtVerified = QLineEdit(self)
+        self.lnedtVerified.setProperty('field', 'verifiedForFii')
+        self.lnedtVerified.setReadOnly(True)
+        self.lnedtVerified.setFrame(False)
+        self.lnedtVerified.setMaximumWidth(40)
+        self.lnedtVerified.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.layoutVerified.addWidget(self.lnedtVerified)
+        self.layoutVerified.addWidget(wdgt)
+        self.gridLayout.addLayout(self.layoutVerified, 0, 1, 1, 2)
 
+        self.layoutInvDL = QHBoxLayout()
         self.chkbxInvDL = QCheckBox(self)
         wdgt = self.chkbxInvDL
         wdgt.setObjectName(u"checkBox_2")
         wdgt.setProperty('field', 'inv_downloaded')
         wdgt.checkStateChanged.connect(lambda newstate: self.changeField(self.chkbxInvDL))
-        self.gridLayout.addWidget(wdgt, 0, 4, 1, 2)
+        self.lnedtInvDL = QLineEdit(self)
+        self.lnedtInvDL.setProperty('field', 'inv_downloaded')
+        self.lnedtInvDL.setReadOnly(True)
+        self.lnedtInvDL.setFrame(False)
+        self.lnedtInvDL.setMaximumWidth(40)
+        self.lnedtInvDL.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.layoutInvDL.addWidget(self.lnedtInvDL)
+        self.layoutInvDL.addWidget(wdgt)
+        self.gridLayout.addLayout(self.layoutInvDL, 0, 4, 1, 2)
         
         self.btnCommit = QPushButton(self)
         wdgt = self.btnCommit
@@ -1108,14 +1137,20 @@ class Invoice_singleForm(QWidget):
                     elif any([wdgt.inherits(tp) for tp in ['QDateEdit', ]]):
                         wdgt.setDate(field_value)
                     elif any([wdgt.inherits(tp) for tp in ['QCheckBox', ]]):
-                        wdgt.setChecked(field_value)
+                        wdgt.setChecked(field_value if isinstance(field_value,bool) else False)
                     # endif widget type test
 
                     break   # we found the widget for this field; we don't need to keep testing widgets
                 # endif widget field = field.name
             # endfor wdgt in self.children()
         #endfor field in cRec
-            
+        
+        # exception to the rule; the two chekbox YES/No exposewrs
+        wdgt = self.lnedtVerified
+        wdgt.setText('YES' if getattr(cRec, wdgt.property('field'), False) else 'NO') 
+        wdgt = self.lnedtInvDL
+        wdgt.setText('YES' if getattr(cRec, wdgt.property('field'), False) else 'NO') 
+        
         self.setFormDirty(self, False)
     # fillFormFromRec
 
@@ -1125,6 +1160,10 @@ class Invoice_singleForm(QWidget):
 
     @Slot()
     def changeField(self, wdgt:QWidget) -> bool:
+        iWannaDebug = False
+        if iWannaDebug and (wdgt == self.chkbxInvDL or wdgt == self.chkbxVerified):
+            breakpoint()
+            
         # move to class var?
         forgnKeys = {   
             'Company',
@@ -1205,9 +1244,18 @@ class Invoice_singleForm(QWidget):
             # endif HBL not exists
         # endif dbField == "HBL"
 
-        if wdgt_value:
+        if wdgt_value or isinstance(wdgt_value,bool):
             setattr(cRec, dbField, wdgt_value)
             self.setFormDirty(wdgt, True)
+
+            # exception to the rule; the two chekbox YES/No exposewrs
+            specialwdgt = self.lnedtVerified
+            if dbField == specialwdgt.property('field'):
+                specialwdgt.setText('YES' if getattr(cRec, specialwdgt.property('field'), False) else 'NO') 
+            specialwdgt = self.lnedtInvDL
+            if dbField == specialwdgt.property('field'):
+                specialwdgt.setText('YES' if getattr(cRec, specialwdgt.property('field'), False) else 'NO') 
+        
             return True
         else:
             return False
@@ -1762,7 +1810,7 @@ class refsForm(QWidget):
         if dbField in forgnKeys:
             dbField += '_id'
         
-        if wdgt_value:
+        if wdgt_value or isinstance(wdgt_value,bool):
             if dbField in specialProcFlds:
                 if dbField == 'Origin': breakpoint()
                 specFld = specialProcFlds[dbField]
