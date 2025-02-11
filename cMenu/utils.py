@@ -199,7 +199,13 @@ class cComboBoxFromDict(QComboBox):
         # qCompleterObj.setFilterMode(Qt.MatchFlag.MatchContains)
         # qCompleterObj.setCompletionMode(QCompleter.CompletionMode.PopupCompletion)
         # self.setCompleter(qCompleterObj)
+        
+        self.replaceDict(dict)
 
+    def replaceDict(self, dict:Dict[str, Any]):
+        self.clear()
+        self._combolist.clear()
+        
         for key, val in dict.items():
             self.addItem(key,val)
             self._combolist.append({key:val})

@@ -11,7 +11,7 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QWidget, QGridLayout, QHBoxLayout, QVBoxLayout,
     QDialog, QMessageBox, 
-    QPushButton, QDialogButtonBox, QLabel, QFrame, QLineEdit, QCheckBox,
+    QPushButton, QDialogButtonBox, QLabel, QFrame, QLineEdit, QCheckBox, QComboBox,
     QSizePolicy, 
     )
 from PySide6.QtSvgWidgets import QSvgWidget
@@ -60,9 +60,10 @@ class cWidgetMenuItem(QWidget):
         self.lblOptionNumber.setText(self.tr('Option Number '))
         self.lnedtOptionNumber = QLineEdit(self)
         self.lnedtOptionNumber.setProperty('field', 'OptionNumber')
+        self.lnedtOptionNumber.setProperty('noedit', True)
         self.lnedtOptionNumber.setReadOnly(True)
         self.lnedtOptionNumber.setFrame(False)
-        self.lnedtOptionNumber.setMaximumWidth(40)
+        self.lnedtOptionNumber.setMaximumWidth(25)
         self.lnedtOptionNumber.setFocusPolicy(Qt.FocusPolicy.NoFocus)
 
         self.lblOptionText = QLabel(self)
@@ -77,6 +78,7 @@ class cWidgetMenuItem(QWidget):
         self.chkbxTopLine.checkStateChanged.connect(lambda newstate: self.changeField(self.chkbxTopLine))
         self.lnedtTopLine = QLineEdit(self)
         self.lnedtTopLine.setProperty('field', 'TopLine')
+        self.lnedtTopLine.setProperty('noedit', True)
         self.lnedtTopLine.setReadOnly(True)
         self.lnedtTopLine.setFrame(False)
         self.lnedtTopLine.setMaximumWidth(40)
@@ -90,6 +92,7 @@ class cWidgetMenuItem(QWidget):
         self.chkbxBottomLine.checkStateChanged.connect(lambda newstate: self.changeField(self.chkbxBottomLine))
         self.lnedtBottomLine = QLineEdit(self)
         self.lnedtBottomLine.setProperty('field', 'BottomLine')
+        self.lnedtBottomLine.setProperty('noedit', True)
         self.lnedtBottomLine.setReadOnly(True)
         self.lnedtBottomLine.setFrame(False)
         self.lnedtBottomLine.setMaximumWidth(40)
@@ -99,10 +102,10 @@ class cWidgetMenuItem(QWidget):
 
         self.layoutFormLine1.addWidget(self.lblOptionNumber)
         self.layoutFormLine1.addWidget(self.lnedtOptionNumber)
-        self.layoutFormLine1.addSpacing(20)
+        # self.layoutFormLine1.addSpacing(20)
         self.layoutFormLine1.addWidget(self.lblOptionText)
         self.layoutFormLine1.addWidget(self.lnedtOptionText)
-        self.layoutFormLine1.addSpacing(20)
+        # self.layoutFormLine1.addSpacing(20)
         self.layoutFormLine1.addLayout(self.layoutTopLine)
         self.layoutFormLine1.addLayout(self.layoutBottomLine)
 
@@ -130,18 +133,18 @@ class cWidgetMenuItem(QWidget):
 
         self.layoutFormLine2.addWidget(self.lblCommand)
         self.layoutFormLine2.addWidget(self.cmbobxCommand)
-        self.layoutFormLine2.addSpacing(20)
+        # self.layoutFormLine2.addSpacing(20)
         self.layoutFormLine2.addWidget(self.lblArgument)
         self.layoutFormLine2.addWidget(self.lnedtArgument)
-        self.layoutFormLine2.addSpacing(20)
+        # self.layoutFormLine2.addSpacing(20)
         self.layoutFormLine2.addWidget(self.lblPWord)
         self.layoutFormLine2.addWidget(self.lnedtPWord)
 
         ##
         
         self.btnCommit = QPushButton(self.tr('Save\nChanges'), self)
-        self.btnCommit.clicked.connect(lambda: pleaseWriteMe(self, 'save Menu Irtem changes'))
-        self.layoutFormLine2.addSpacing(5)
+        self.btnCommit.clicked.connect(self.writeRecord)
+        # self.layoutFormLine2.addSpacing(5)
         self.layoutFormLine2.addWidget(self.btnCommit)
 
         self.lblReminders = QLabel(self.tr(' *** ADD REMOVE / MOVE / COPY ***'))
@@ -276,22 +279,18 @@ class cWidgetMenuItem(QWidget):
         # endif wdgt_value
     # changeField
     
+    @Slot()
     def writeRecord(self):
         if not self.isFormDirty():
             return
         
         cRec:menuItems = self.currRec
-        newrec = (cRec is None)
         
         # check other traps later
         
         cRec.save()
         pk = cRec.pk
-        
-        if newrec:
-            # add this record to self.gotoHBL.completer().model()
-            ...
-            
+                    
         self.setFormDirty(self, False)
     # writeRecord
 
@@ -299,7 +298,22 @@ class cWidgetMenuItem(QWidget):
     ##########################################
     ########    Delete
 
-    # Delete not supported yet
+    def rmvMenuOption(self):
+        ...
+        (mGrp, mnu, mOpt) = (self.currRec.MenuGroup, self.currRec.MenuID, self.currRec.OptionNumber)
+        
+        # verify delete
+        
+        # remove from db
+        if self.currRec.pk:
+            self.currRec.delete()
+        
+        # replace with an empty record
+        self.currRec = menuItems(
+            MenuGroup = mGrp,
+            MenuID = mnu,
+            OptionNumber =mOpt,
+            )
 
 
     ##########################################
@@ -307,6 +321,9 @@ class cWidgetMenuItem(QWidget):
 
     @Slot()
     def setFormDirty(self, wdgt:QWidget, dirty:bool = True):
+        if wdgt.property('noedit'):
+            return
+        
         wdgt.setProperty('dirty', dirty)
         # if wdgt === self, set all children dirty
         if wdgt is not self:
@@ -325,6 +342,9 @@ class cWidgetMenuItem(QWidget):
 
     ##########################################
     ########    Widget-responding procs
+    
+    def copyMenuOption(self, moveit=False):
+        ...
 
 #############################################
 #############################################
@@ -347,31 +367,75 @@ class cEditMenu(QWidget):
     def __init__(self, parent:QWidget = None):
         super().__init__(parent)
         
-        self.menuLayout: QGridLayout = QGridLayout()
+        self.layoutmainMenu: QGridLayout = QGridLayout()
         self.WmenuItm: Dict[int, cEditMenu.wdgtmenuITEM] = {}
-        self.menuHdrLayout: QHBoxLayout = QHBoxLayout()
-        self.lblmenuID: QLabel = QLabel("")
-        self.lblmenuName: QLabel = QLabel("")
+        self.layoutmenuHdr: QHBoxLayout = QHBoxLayout()
+        self.layoutmenuHdrLeft: QVBoxLayout = QVBoxLayout()
+        self.layoutmenuHdrRight: QVBoxLayout = QVBoxLayout()
         self._menuSOURCE = MenuRecords()
-        self.currentMenu: QuerySet = None
+        self.currentMenu:QuerySet[menuItems] = None
+        self.currRec:menuItems = None
         
-        self.menuLayout.setColumnStretch(0,1)
-        self.menuLayout.setColumnStretch(1,0)
-        self.menuLayout.setColumnStretch(2,1)
+        self.layoutmainMenu.setColumnStretch(0,1)
+        self.layoutmainMenu.setColumnStretch(1,0)
+        self.layoutmainMenu.setColumnStretch(2,1)
+        # self.menuLayout.setColumnMinimumWidth(0,_SCRN_menuBTNWIDTH)
+        # self.menuLayout.setColumnMinimumWidth(1,_SCRN_menuDIVWIDTH)
+        # self.menuLayout.setColumnMinimumWidth(2,_SCRN_menuBTNWIDTH)
         
-        self.setLayout(self.menuLayout)
-        
-        self.menuHdrLayout.addWidget(self.lblmenuID, stretch=0, alignment=Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignTop)
-        self.menuHdrLayout.addWidget(self.lblmenuName, stretch=1, alignment=Qt.AlignmentFlag.AlignCenter)
-        self.menuLayout.addLayout(self.menuHdrLayout,0,0,1,3)
-        
-        self.lblmenuID.setFont(QFont("Arial",8))
-        self.lblmenuID.setMargin(10)
-        self.lblmenuName.setFrameStyle(QFrame.Panel | QFrame.Sunken)
-        self.lblmenuName.setFont(QFont("Century Gothic", 24))
-        # self.menuName.setMargin(20)
-        self.lblmenuName.setWordWrap(False)
+        self.layoutMenuHdrLn1 = QHBoxLayout()
+        self.layoutMenuHdrLn2 = QHBoxLayout()
 
+        self.lblmenuGroup:QLabel = QLabel(self.tr('Menu Group'), self)        
+        self.lblmenuGroupName:QLabel = QLabel(self.tr('Group Name'), self)
+        self.lblmenuID:QLabel = QLabel(self.tr('menu'), self)
+        self.lblmenuName:QLabel = QLabel(self.tr('Menu Name'), self)
+
+        self.combxmenuGroup:QComboBox = cComboBoxFromDict(self.dictmenuGroup(), self)
+        self.combxmenuGroup.setProperty('field', 'MenuGroup')
+        self.combxmenuGroup.activated.connect(lambda: pleaseWriteMe(self, 'menuGroup Changed\nLoadMenuGroup?'))
+        self.lnedtmenuGroupName:QLineEdit = QLineEdit(self)
+        self.lnedtmenuGroupName.setProperty('field', 'GroupName')
+        self.lnedtmenuGroupName.editingFinished.connect(lambda: self.changeField(self.lnedtmenuGroupName))
+        self.btnNewMenuGroup:QPushButton = QPushButton(self.tr('New Menu\nGroup'), self)
+        self.btnNewMenuGroup.clicked.connect(self.createNewMenuGroup)
+        self.combxmenuID:QComboBox = cComboBoxFromDict(self.dictmenus(), self)
+        self.combxmenuID.setProperty('field', 'MenuID')
+        self.combxmenuID.activated.connect(lambda: pleaseWriteMe(self, 'Menu ID changed\nLoadMenu?'))
+        self.lnedtmenuName:QLineEdit = QLineEdit(self)
+        self.lnedtmenuName.setProperty('field', 'OptionText')
+        self.lnedtmenuName.editingFinished.connect(lambda: self.changeField(self.lnedtmenuName))
+        
+        self.btnRmvMenu:QPushButton = QPushButton(self.tr('Remove Menu'), self)
+        self.btnRmvMenu.clicked.connect(self.rmvMenu)
+        self.btnCopyMenu:QPushButton = QPushButton(self.tr('Copy/Move\nMenu'), self)
+        self.btnCopyMenu.clicked.connect(self.copyMenu)
+        
+        self.layoutMenuHdrLn1.addWidget(self.lblmenuGroup)
+        self.layoutMenuHdrLn1.addWidget(self.combxmenuGroup)
+        self.layoutMenuHdrLn1.addWidget(self.lblmenuGroupName)
+        self.layoutMenuHdrLn1.addWidget(self.lnedtmenuGroupName)
+        self.layoutMenuHdrLn1.addWidget(self.btnNewMenuGroup)
+        
+        self.layoutMenuHdrLn2.addWidget(self.lblmenuID)
+        self.layoutMenuHdrLn2.addWidget(self.combxmenuID)
+        self.layoutMenuHdrLn2.addWidget(self.lblmenuName)
+        self.layoutMenuHdrLn2.addWidget(self.lnedtmenuName)
+        self.layoutMenuHdrLn2.addWidget(self.btnRmvMenu)
+        self.layoutMenuHdrLn2.addWidget(self.btnCopyMenu)
+        
+        self.btnCommit:QPushButton = QPushButton(self.tr('\nSave\nChanges\n'), self)
+        self.btnCommit.clicked.connect(self.writeRecord)
+
+        self.layoutmenuHdrLeft.addLayout(self.layoutMenuHdrLn1)
+        self.layoutmenuHdrLeft.addLayout(self.layoutMenuHdrLn2)
+        self.layoutmenuHdrRight.addWidget(self.btnCommit)
+        self.layoutmenuHdrRight.setAlignment(Qt.AlignmentFlag.AlignVCenter)
+        self.layoutmenuHdr.addLayout(self.layoutmenuHdrLeft)
+        self.layoutmenuHdr.addLayout(self.layoutmenuHdrRight)
+        
+        self.layoutmainMenu.addLayout(self.layoutmenuHdr,0,0,1,3)
+    ####
         self.bxFrame:List[QFrame] = [QFrame() for _ in range(_NUM_menuBUTTONS)]
         for bNum in range(_NUM_menuBUTTONS):
             self.bxFrame[bNum].setLineWidth(1)
@@ -379,25 +443,43 @@ class cEditMenu(QWidget):
             
         self.setWindowTitle(self.tr('Edit Menu'))
                     
+        self.setLayout(self.layoutmainMenu)
         self.loadMenu()
     # __init__
 
-    def clearoutMenu(self):
-        self.lblmenuID.setText("")
-        self.lblmenuName.setText("")
-        for bNum in range(_NUM_menuBTNperCOL):
-            self.WmenuItm[bNum].setText("\n\n")
-            self.WmenuItm[bNum].setEnabled(False)
-            self.WmenuItm[bNum+_NUM_menuBTNperCOL].setText("\n\n")
-            self.WmenuItm[bNum+_NUM_menuBTNperCOL].setEnabled(False)
-    
+    def dictmenuGroup(self) -> Dict[str, int]:
+        # return Nochoice | { str(x): x.pk for x in menuGroups.objects.all() }    
+        return { str(x): x.pk for x in menuGroups.objects.all() } 
+
+    def dictmenus(self) -> Dict[str, int]:
+        return { x.OptionText: x.MenuID for x in menuItems.objects.filter(MenuGroup=self.intmenuGroup, OptionNumber=0) } 
+
+
+    ##########################################
+    ########    Create
+
+    def createNewMenu(self):
+        return
+
+    def createNewMenuGroup(self):
+        pleaseWriteMe(self, 'Create New Menu Group')
+        return
+        
+    ##########################################
+    ########    Read
+
     def displayMenu(self):
         menuGroup = self.intmenuGroup
         menuID = self.intmenuID
         menuItemRecs = self.currentMenu
+        menuHdrRec:menuItems = menuItemRecs.get(OptionNumber=0)
         
-        self.lblmenuID.setText(f'{menuGroup},{menuID}\n{sysver["DEV"]}')
-        self.lblmenuName.setText(str(menuItemRecs[0].OptionText))
+        # set header elements
+        self.combxmenuGroup.setCurrentIndex(self.combxmenuGroup.findData(menuGroup))
+        self.lnedtmenuGroupName.setText(menuHdrRec.MenuGroup.GroupName)
+        self.combxmenuID.replaceDict(self.dictmenus())
+        self.combxmenuID.setCurrentIndex(self.combxmenuID.findData(menuID))
+        self.lnedtmenuName.setText(menuHdrRec.OptionText)
 
         for bNum in range(_NUM_menuBTNperCOL):
             # column 1
@@ -411,13 +493,14 @@ class cEditMenu(QWidget):
                     )
             self.WmenuItm[bNum] = self.wdgtmenuITEM(mnuItmRc)
             
-            oldWdg = self.menuLayout.itemAtPosition(bNum+1,0)
+            oldWdg = self.layoutmainMenu.itemAtPosition(bNum+1,0)
             if oldWdg:
-                self.menuLayout.removeItem(oldWdg)
+                self.layoutmainMenu.removeItem(oldWdg)
                 del oldWdg
                 
-            self.menuLayout.addWidget(self.bxFrame[bNum],bNum+1,0)
-            self.menuLayout.addWidget(self.WmenuItm[bNum],bNum+1,0) # must add widget last so it become editable
+            if self.layoutmainMenu.indexOf(self.bxFrame[bNum]) == -1:
+                self.layoutmainMenu.addWidget(self.bxFrame[bNum],bNum+1,0)  # ??? will this work 2nd time?
+            self.layoutmainMenu.addWidget(self.WmenuItm[bNum],bNum+1,0) # must add widget last so it become editable
             
             # column 2
             bIndx = bNum+1+_NUM_menuBTNperCOL
@@ -430,14 +513,17 @@ class cEditMenu(QWidget):
                     )
             self.WmenuItm[bNum+_NUM_menuBTNperCOL] = self.wdgtmenuITEM(mnuItmRc, self.parent())
             
-            oldWdg = self.menuLayout.itemAtPosition(bNum+1,2)
+            oldWdg = self.layoutmainMenu.itemAtPosition(bNum+1,2)
             if oldWdg:
-                self.menuLayout.removeItem(oldWdg)
+                self.layoutmainMenu.removeItem(oldWdg)
                 del oldWdg
-            self.menuLayout.addWidget(self.bxFrame[bNum+_NUM_menuBTNperCOL],bNum+1,2)
-            self.menuLayout.addWidget(self.WmenuItm[bNum+_NUM_menuBTNperCOL],bNum+1,2) # must add widget last so it become editable
+            if self.layoutmainMenu.indexOf(self.bxFrame[bNum+_NUM_menuBTNperCOL]) == -1:
+                self.layoutmainMenu.addWidget(self.bxFrame[bNum+_NUM_menuBTNperCOL],bNum+1,2)
+            self.layoutmainMenu.addWidget(self.WmenuItm[bNum+_NUM_menuBTNperCOL],bNum+1,2) # must add widget last so it become editable
         # endfor
      
+    # displayMenu
+
     def loadMenu(self, menuGroup: int = _DFLT_menuGroup, menuID: int = _DFLT_menuID):
         SRC = self._menuSOURCE
         if menuGroup==self._DFLT_menuGroup:
@@ -451,6 +537,8 @@ class cEditMenu(QWidget):
         
         if SRC.menuExist(menuGroup, menuID):
             self.currentMenu = SRC.menuDBRecs(menuGroup, menuID)
+            self.currRec = self.currentMenu.get(OptionNumber=0)
+            self.setFormDirty(self, False)       # should this be in displayMenu ?
             self.displayMenu()
         else:
             # menu doesn't exist; say so
@@ -460,7 +548,140 @@ class cEditMenu(QWidget):
             msg.setStandardButtons(QMessageBox.StandardButton.Ok)
             msg.setText(f'Menu {menuID} does\'t exist!')
             msg.open()
+
+    # loadMenu
+
+
+    ##########################################
+    ########    Update
+
+    @Slot()
+    def changeField(self, wdgt:QWidget) -> bool:
+        # move to class var?
+        forgnKeys = {   
+            'MenuGroup',
+            }
+        # move to class var?
+        valu_transform_flds = {
+            'GroupName',
+            }
+        cRec:menuItems = self.currRec
+        dbField = wdgt.property('field')
+
+        wdgt_value = None
+
+        #TODO: write cUtil getQWidgetValue(wdgt), setQWidgetValue(wdgt)
+        #widgtype = wdgt.staticMetaObject.className()
+        if any([wdgt.inherits(tp) for tp in ['cDataList', ]]):
+            kees = wdgt.selectedItem()['keys']
+            wdgt_value = kees[0] if kees else wdgt.text()
+        elif any([wdgt.inherits(tp) for tp in ['QLineEdit', ]]):
+            wdgt_value = wdgt.text()
+        elif any([wdgt.inherits(tp) for tp in ['QTextEdit', ]]):
+            wdgt_value = wdgt.toPlainText()
+        elif any([wdgt.inherits(tp) for tp in ['QComboBox', ]]):
+            wdgt_value = wdgt.currentData()
+        elif any([wdgt.inherits(tp) for tp in ['QDateEdit', ]]):
+            wdgt_value = wdgt.date().toPython()
+        elif any([wdgt.inherits(tp) for tp in ['QCheckBox', ]]):
+            wdgt_value = wdgt.isChecked()
+        # endif widget type test
+
+        if dbField in forgnKeys:
+            dbField += '_id'
+        if dbField in valu_transform_flds:
+            # wdgt_value = valu_transform_flds[dbField][1](wdgt_value)
+            pass
+
+        if wdgt_value or isinstance(wdgt_value,bool):
+            if dbField != 'GroupName':  # GroupName belongs to cRec.MenuGroup; persist only at final write
+                setattr(cRec, dbField, wdgt_value)
+            self.setFormDirty(wdgt, True)
+        
+            return True
+        else:
+            return False
+        # endif wdgt_value
+    # changeField
     
+    @Slot()
+    def writeRecord(self):
+        if not self.isFormDirty():
+            return
+        
+        cRec:menuItems = self.currRec
+        
+        # check other traps later
+        
+        if self.isWdgtDirty(self.lnedtmenuGroupName):
+            cRec.MenuGroup.GroupName = self.lnedtmenuGroupName.text()
+            cRec.MenuGroup.save()
+
+        cRec.save()
+        
+        self.setFormDirty(self, False)
+    # writeRecord
+
+
+    ##########################################
+    ########    Delete
+
+    @Slot()
+    def rmvMenu(self):
+        
+        pleaseWriteMe(self, 'Remove Menu')
+        return
+        
+        (mGrp, mnu, mOpt) = (self.currRec.MenuGroup, self.currRec.MenuID, self.currRec.OptionNumber)
+        
+        # verify delete
+        
+        # remove from db
+        if self.currRec.pk:
+            self.currRec.delete()
+        
+        # replace with an "next" record
+        self.currRec = menuItems(
+            MenuGroup = mGrp,
+            MenuID = mnu,
+            OptionNumber = mOpt,
+            )
+
+
+    ##########################################
+    ########    CRUD support
+
+    @Slot()
+    def setFormDirty(self, wdgt:QWidget, dirty:bool = True):
+        if wdgt.property('noedit'):
+            return
+        
+        wdgt.setProperty('dirty', dirty)
+        # if wdgt === self, set all children dirty
+        if wdgt is not self:
+            if dirty: self.setProperty('dirty',True)
+        else:
+            for W in self.children():
+                if any([W.inherits(tp) for tp in ['QLineEdit', 'QTextEdit', 'QCheckBox', 'QComboBox', 'QDateEdit', ]]):
+                    W.setProperty('dirty', dirty)
+        
+        # enable btnCommit if anything dirty
+        self.btnCommit.setEnabled(self.property('dirty'))
+    
+    def isFormDirty(self) -> bool:
+        return self.property('dirty')
+
+    def isWdgtDirty(self, wdgt:QWidget) -> bool:
+        return wdgt.property('dirty')
+
+
+    ##########################################
+    ########    Widget-responding procs
+    
+    def copyMenu(self):
+        lambda: pleaseWriteMe(self, 'Copy/Move Menu')
+        return
+        
 
 #############################################
 #############################################
