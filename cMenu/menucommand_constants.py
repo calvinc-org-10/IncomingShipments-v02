@@ -1,6 +1,9 @@
 # this list of constants is here becxause its refd by kls_cMenu and models
 # it's alone so it doesn't cause circular reference
 
+import types
+
+
 # Menu Command Constants
 MENUCOMMANDS = {
     # CommandNumber: CommandText
@@ -18,5 +21,5 @@ MENUCOMMANDS = {
     93: 'EditGreetings',
     200: 'ExitApplication',
 }
-COMMANDNUMBER =  {CText:CNum for CNum,CText in MENUCOMMANDS.items()}
-
+# Convert dictionary to object
+COMMANDNUMBER =  types.SimpleNamespace(**{CText:CNum for CNum,CText in MENUCOMMANDS.items()})

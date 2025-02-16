@@ -45,6 +45,14 @@ def pleaseWriteMe(parent, addlmessage):
     msg.setText(f'Calvin needs to get up off his butt and write some code\n{addlmessage}')
     msg.open()
 
+def areYouSure(parent:QWidget, title:str, 
+        areYouSureQuestion:str, 
+        answerChoices:QMessageBox.StandardButton = QMessageBox.StandardButton.Yes|QMessageBox.StandardButton.No,
+        dfltAnswer:QMessageBox.StandardButton = QMessageBox.StandardButton.No,
+        ) -> QMessageBox.StandardButton:
+    ret = QMessageBox.question(parent, title,
+        areYouSureQuestion, answerChoices, dfltAnswer)
+    return ret
 
 class cDataList(QLineEdit):
     """

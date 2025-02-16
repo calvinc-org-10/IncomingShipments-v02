@@ -1,4 +1,6 @@
-from typing import Any, Dict, List
+from typing import (Any, Dict, List, )
+
+from .menucommand_constants import (MENUCOMMANDS, COMMANDNUMBER, )
 
 # self, menuID: str, menuName: str, menuItems:Dict[int,Dict]):
 # {'keys': {'MenuGroup': 1, 'MenuID': 0, 'OptionNumber': 0}, 
@@ -76,6 +78,22 @@ test_menulist = [
     'values': {'OptionText': 'load Invoices', 'Command': 11, 'Argument': 'init-load-Inv-00', 'PWord': '', 'TopLine': None, 'BottomLine': None, }},
 ]
 
+newgroupnewmenu_menulist = [
+{'MenuID': 0, 'OptionNumber': 0,
+    'OptionText': 'New Menu', 'Command': None, 'Argument': 'Default', 'PWord': '', 'TopLine': 1, 'BottomLine': 1, },
+{'MenuID': 0, 'OptionNumber': 19,
+    'OptionText': 'Change Password', 'Command': COMMANDNUMBER.ChangePW, 'Argument': '', 'PWord': '', },
+{'MenuID': 0, 'OptionNumber': 20,
+    'OptionText': 'Go Away!', 'Command': COMMANDNUMBER.ExitApplication, 'Argument': '', 'PWord': '', },
+]
+
+newmenu_menulist = [
+{'OptionNumber': 0,
+    'OptionText': 'New Menu', 'Command': None, 'Argument': '', 'PWord': '', 'TopLine': 1, 'BottomLine': 1, },
+{'OptionNumber': 20,
+    'OptionText': 'Return to Main Menu', 'Command': COMMANDNUMBER.LoadMenu, 'Argument': '0', 'PWord': '', },
+]
+
 
 from django.db.models import Min, QuerySet
 from .models import menuItems
@@ -131,3 +149,8 @@ class MenuRecords(object):
                         and mRec['keys']['MenuID']==mID \
                         and mRec['keys']['OptionNumber']==0 \
             ))
+
+    def newgroupnewmenuDict(self, mGroup:int, mID:int) ->  List[Dict]:
+        return newgroupnewmenu_menulist
+    def newmenuDict(self, mGroup:int, mID:int) ->  List[Dict]:
+        return newmenu_menulist
