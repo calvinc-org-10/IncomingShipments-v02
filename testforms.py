@@ -99,23 +99,6 @@ class Test03():
     def setProperty(self, dummy1, dummy2):
         pass
 
-class cQFmFldWidg(QWidget):
-    _label:QLabel = None
-    _mdlField:str = None
-
-    def __init__(self, 
-        widgType:type[QWidget], parent:QWidget = None, 
-        lblText:str = '', 
-        mdlFld:str = '', fldSetter:Slot = None, 
-        ):
-        
-        super().__init__(parent)
-            
-    def Label(self) -> QLabel:
-        ...
-    def setLabel(self, txt:str) -> None:
-        ...
-
 
 ##############################################################
 ##############################################################

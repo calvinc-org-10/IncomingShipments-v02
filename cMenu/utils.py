@@ -668,3 +668,135 @@ class UnderConstruction_Dialog(QDialog):
         QMetaObject.connectSlotsByName(self)
     # __init__
 
+
+class cQFmFldWidg(QWidget):
+    _label:QLabel = None
+    _modlField:str = None
+    signalFldChanged:Signal = Signal()
+
+    def __init__(self, 
+        widgType:type[QWidget], 
+        lblText:str = '', alignlblText:Qt.AlignmentFlag = Qt.AlignmentFlag.AlignLeft ,
+        lblChkBxYesNo:Dict[bool,str]|None = None,
+        modlFld:str = None, fldSetter:Slot = None, sgnlFldChange:Signal = None,       # fldSetter needed?
+        choices:Dict|List = None,
+        parent:QWidget = None, 
+        ):
+        
+        
+        self = widgType(parent)  # does this have to be by type?
+        super().__init__(parent)
+
+        layout = QGridLayout(self)
+        
+        lblLabel = QLabel()
+        
+        # set hooks
+        if any([self.inherits(tp) for tp in ['cDataList', ]]):
+            self.Value    = lambda: self.selectedItem()['keys'][0] if self.selectedItem()['keys'] else self.text()
+            self.setValue = self.setText
+        elif any([self.inherits(tp) for tp in ['QLineEdit', ]]):
+            self.Value    = self.text
+            self.setValue = self.setText
+        elif any([self.inherits(tp) for tp in ['QTextEdit', ]]):
+            self.Value    = self.setPlainText
+            self.setValue = self.toPlainText
+        # support QPlainTextEdit later
+        # elif any([self.inherits(tp) for tp in ['QPlainTextEdit', ]]):
+        #     ...
+        elif any([self.inherits(tp) for tp in ['QComboBox', ]]):
+            self.Value    = self.currentData
+            self.setValue = lambda value: \
+                self.setCurrentText(value) if self.findData(value) == -1 else self.setCurrentIndex(self.findData(value))
+        elif any([self.inherits(tp) for tp in ['QDateEdit', ]]):
+            self.Value    = lambda: self.date().toPython()
+            self.setValue = self.setDate
+        # support QSpinBox, QDoubleSpinBox, QDateTimeEdit, QTimeEdit ???
+        # support QCalendarWidget later
+        # elif any([self.inherits(tp) for tp in ['QCalendarWidget', ]]):
+        #     ...
+        elif any([self.inherits(tp) for tp in ['QCheckBox', ]]):
+            self.Value    = self.isChecked
+            self.setValue = lambda value: self.setChecked(value if isinstance(value,bool) else False)
+        # support later: QButtonGroup/QGroupBox
+        # support later: QSlider, QDial
+        else:
+            
+            ...
+        # endif widget type test
+
+        # set the ModelField
+        self.setModelField(modlFld)
+        
+        # set up the layout
+        
+    
+    def Label(self) -> QLabel:
+        ...
+    def setLabel(self, txt:str) -> None:
+        ...
+
+    def ModelField(self) -> str:
+        return self._modlField
+    def setModelField(self, fldName:str) -> None:
+        self._modlField = fldName
+
+
+
+##################################################
+##################################################
+##################################################
+
+import ast
+
+def show_fns(path_:str):
+    # open file as ast (abstract syntax tree)
+    with open(path_) as file:
+        node = ast.parse(file.read())
+
+    # 
+    def show_info(functionNode):
+        function_rep = ''
+        function_rep = functionNode.name + '('
+
+        for arg in functionNode.args.args:
+            function_rep += arg.arg + ','
+
+        function_rep = function_rep.rstrip(function_rep[-1])
+        function_rep += ')'
+        return function_rep
+
+    # get all fns and classes
+    result = {'classes':[], 'functions':[]}
+    functions = [n for n in node.body if isinstance(n, ast.FunctionDef)]
+    classes = [n for n in node.body if isinstance(n, ast.ClassDef)]
+
+    for function in functions:
+        result['functions'].append(show_info(function))
+
+    for class_ in classes:
+        result['classes'].append(f'class {class_.name}')
+        methods = [n for n in class_.body if isinstance(n, ast.FunctionDef)]
+        for method in methods:
+            result['classes'].append(f'    def {class_.name}.{show_info(method)}')
+
+    return result
+    # print(', '.join(result))
+    # This prints expected output
+    # fo(x), A.fun(self,y), A._bo(self,y), A.NS(y,z), B.foo(self,z), B._bar(self,t)
+def pretty_show_fns(path_:str):
+    result = show_fns(path_)
+
+    result_str = ''
+
+    result_str += ' CLASSES: \n----------\n'
+    for c in result['classes']:
+        result_str += f'{c}\n'
+    result_str += '\n'
+
+    result_str += ' FUNCTIONS: \n------------\n'
+    for c in result['functions']:
+        result_str += f'{c}\n'
+    
+    return result_str
+    

@@ -496,6 +496,8 @@ class cEditMenu(QWidget):
         self.lblmenuGroupName:QLabel = QLabel(self.tr('Group Name'), self)
         self.lblmenuID:QLabel = QLabel(self.tr('menu'), self)
         self.lblmenuName:QLabel = QLabel(self.tr('Menu Name'), self)
+        self.lblnummenuGroupID:  QLCDNumber = QLCDNumber(3)
+        self.lblnummenuID:  QLCDNumber = QLCDNumber(3)
 
         self.combxmenuGroup:QComboBox = cComboBoxFromDict(self.dictmenuGroup(), self)
         self.combxmenuGroup.setProperty('field', 'MenuGroup')
@@ -518,12 +520,14 @@ class cEditMenu(QWidget):
         self.btnCopyMenu.clicked.connect(self.copyMenu)
         
         self.layoutMenuHdrLn1.addWidget(self.lblmenuGroup)
+        self.layoutMenuHdrLn1.addWidget(self.lblnummenuGroupID)
         self.layoutMenuHdrLn1.addWidget(self.combxmenuGroup)
         self.layoutMenuHdrLn1.addWidget(self.lblmenuGroupName)
         self.layoutMenuHdrLn1.addWidget(self.lnedtmenuGroupName)
         self.layoutMenuHdrLn1.addWidget(self.btnNewMenuGroup)
         
         self.layoutMenuHdrLn2.addWidget(self.lblmenuID)
+        self.layoutMenuHdrLn2.addWidget(self.lblnummenuID)
         self.layoutMenuHdrLn2.addWidget(self.combxmenuID)
         self.layoutMenuHdrLn2.addWidget(self.lblmenuName)
         self.layoutMenuHdrLn2.addWidget(self.lnedtmenuName)
@@ -620,8 +624,10 @@ class cEditMenu(QWidget):
         menuHdrRec:menuItems = menuItemRecs.get(OptionNumber=0)
         
         # set header elements
+        self.lblnummenuGroupID.display(menuGroup)
         self.combxmenuGroup.setCurrentIndex(self.combxmenuGroup.findData(menuGroup))
         self.lnedtmenuGroupName.setText(menuHdrRec.MenuGroup.GroupName)
+        self.lblnummenuID.display(menuID)
         self.combxmenuID.replaceDict(self.dictmenus())
         self.combxmenuID.setCurrentIndex(self.combxmenuID.findData(menuID))
         self.lnedtmenuName.setText(menuHdrRec.OptionText)
