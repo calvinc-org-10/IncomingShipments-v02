@@ -28,15 +28,6 @@ fontFormTitle.setFamilies([u"Copperplate Gothic"])
 fontFormTitle.setPointSize(24)
 
 
-def EditMenu_init():
-    ...
-
-def MenuCreate():
-    ...
-
-def MenuRemove():
-    ...
-
 class QWGetSQL(QWidget):
     runSQL = Signal(str)    # Emitted with the SQL string when run is clicked
     cancel = Signal()       # Emitted when cancel is clicked    
