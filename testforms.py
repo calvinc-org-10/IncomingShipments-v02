@@ -112,8 +112,9 @@ class Test02a(QWidget):
         self.layoutFormLine1.addWidget(self.lblOptionNumber)
         self.layoutFormLine1.addWidget(self.lnedtOptionNumber)
         # self.layoutFormLine1.addSpacing(20)
-        self.layoutFormLine1.addWidget(self.lnedtOptionText)
+        self.layoutFormLine1.addWidget(self.fldOptionText)
         # self.layoutFormLine1.addSpacing(20)
+        self.layoutFormLine1.addWidget(self.fldTopLine)
         self.layoutFormLine1.addWidget(self.fldBottomLine)
 
         ##
@@ -122,7 +123,7 @@ class Test02a(QWidget):
 
         self.fldCommand = cQFmFldWidg(cComboBoxFromDict, lblText='Command:', modlFld='Command', 
             choices=vars(COMMANDNUMBER), parent=self)
-        self.fldCommand.signalFldChanged.connect(lambda: self.changeField(self.fldCommand))
+        self.fldCommand.signalFldChanged.connect(lambda x: self.changeField(self.fldCommand))
 
         self.fldArgument = cQFmFldWidg(QLineEdit, lblText='Argument: ', modlFld='Argument', parent=self)
         self.fldArgument.signalFldChanged.connect(lambda: self.changeField(self.fldArgument))
@@ -450,21 +451,21 @@ class Test02(QWidget):
 
         self.fldmenuGroup:cQFmFldWidg = cQFmFldWidg(cComboBoxFromDict, lblText='Menu Group', modlFld='MenuGroup', 
             choices=self.dictmenuGroup(), parent= self)
-        self.fldmenuGroup.signalFldChanged.connect(lambda: self.loadMenu(menuGroup=self.fldmenuGroup.Value())) 
+        self.fldmenuGroup.signalFldChanged.connect(lambda idx: self.loadMenu(menuGroup=self.fldmenuGroup.Value())) 
         self.fldmenuGroupName:cQFmFldWidg = cQFmFldWidg(QLineEdit, lblText='Group Name', modlFld='GroupName', parent=self)
         self.fldmenuGroupName.signalFldChanged.connect(lambda: self.changeField(self.fldmenuGroupName))
         self.btnNewMenuGroup:QPushButton = QPushButton(self.tr('New Menu\nGroup'), self)
         self.btnNewMenuGroup.clicked.connect(self.createNewMenuGroup)
         self.fldmenuID:cQFmFldWidg = cQFmFldWidg(cComboBoxFromDict, lblText='menu', modlFld='MenuID', 
             choices=self.dictmenus(), parent=self)
-        self.fldmenuID.signalFldChanged.connect(lambda: self.loadMenu(menuGroup=self.intmenuGroup, menuID=self.fldmenuID.Value()))
+        self.fldmenuID.signalFldChanged.connect(lambda idx: self.loadMenu(menuGroup=self.intmenuGroup, menuID=self.fldmenuID.Value()))
         self.fldmenuName:cQFmFldWidg = cQFmFldWidg(QLineEdit, lblText='Menu Name', modlFld='OptionText', parent=self)
         self.fldmenuName.signalFldChanged.connect(lambda: self.changeField(self.fldmenuName))
         
         self.lblnummenuGroupID:  QLCDNumber = QLCDNumber(3)
-        self.lblnummenuGroupID.setMaximumSize(30,30)
+        self.lblnummenuGroupID.setMaximumSize(20,20)
         self.lblnummenuID:  QLCDNumber = QLCDNumber(3)
-        self.lblnummenuID.setMaximumSize(30,30)
+        self.lblnummenuID.setMaximumSize(20,20)
 
         self.btnRmvMenu:QPushButton = QPushButton(self.tr('Remove Menu'), self)
         self.btnRmvMenu.clicked.connect(self.rmvMenu)
@@ -672,8 +673,8 @@ class Test02(QWidget):
         
         # check other traps later
         
-        if self.isWdgtDirty(self.lnedtmenuGroupName):
-            cRec.MenuGroup.GroupName = self.lnedtmenuGroupName.text()
+        if self.isWdgtDirty(self.fldmenuGroupName):
+            cRec.MenuGroup.GroupName = self.fldmenuGroupName.Value()
             cRec.MenuGroup.save()
 
         cRec.save()

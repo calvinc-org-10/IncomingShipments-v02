@@ -607,11 +607,13 @@ class UnderConstruction_Dialog(QDialog):
 
 
 class cQFmFldWidg(QWidget):
+    _wdgt:QWidget = None
     _label:QLabel = None
     _modlField:str = None
-    signalFldChanged:Signal = Signal()
     _lblChkYN:QLineEdit = None
     _lblChkYNValues:Dict[bool,str]|None = None
+
+    signalFldChanged:Signal = Signal(object)
 
     def __init__(self, 
         widgType:type[QWidget], 
@@ -622,85 +624,90 @@ class cQFmFldWidg(QWidget):
         choices:Dict|List = None, initval:str = '',
         parent:QWidget = None, 
         ):
+        
+        super().__init__(parent)
 
         if any([widgType == cComboBoxFromDict, ] ):
-            self = widgType(choices, parent)
+            self._wdgt = widgType(choices, parent)
         elif any([widgType == cDataList, ] ):
-            self = widgType(choices, initval, parent)
+            self._wdgt = widgType(choices, initval, parent)
         elif any([widgType == QComboBox, ] ):
             # don't use this widget if using a model, or
             # clear(), then addItem()
-            self = widgType(parent)
-            self.addItems(choices)  
+            self._wdgt = widgType(parent)
+            self._wdgt.addItems(choices)  
         else:
-            self = widgType(parent)  # does this have to be by type?
-        #endif widgType == cComboBoxFromDict
+            self._wdgt = widgType(parent)  # does this have to be by type?
+        #endif widgType 
         
-        # print(f'{widgType=}\n{self=}\n{parent=}')
-        # super(widgType).__init__(parent)
-
         lblText = self.tr(lblText)
+        wdgt = self._wdgt
         
         # set hooks
-        if any([self.inherits(tp) for tp in ['cDataList', ]]):
+        if any([wdgt.inherits(tp) for tp in ['cDataList', ]]):
             self._label = QLabel(lblText) if lblText else None
             self.LabelText = self._label.text
             self.setLabelText = self._label.setText
 
-            self.Value    = lambda: self.selectedItem()['keys'][0] if self.selectedItem()['keys'] else self.text()
-            self.setValue = self.setText
+            self.Value    = lambda: wdgt.selectedItem()['keys'][0] if wdgt.selectedItem()['keys'] else wdgt.text()
+            self.setValue = wdgt.setText
+            
+            self.addChoices = wdgt.addChoices
 
-            self.editingFinished.connect(self.fldChanged)
-        elif any([self.inherits(tp) for tp in ['QLineEdit', ]]):
+            wdgt.editingFinished.connect(self.fldChanged)
+        elif any([wdgt.inherits(tp) for tp in ['QLineEdit', ]]):
             self._label = QLabel(lblText) if lblText else None
             self.LabelText = self._label.text
             self.setLabelText = self._label.setText
 
-            self.Value    = self.text
-            self.setValue = self.setText
+            self.Value    = wdgt.text
+            self.setValue = wdgt.setText
 
-            self.editingFinished.connect(self.fldChanged)
-        elif any([self.inherits(tp) for tp in ['QTextEdit', ]]):
+            wdgt.editingFinished.connect(self.fldChanged)
+        elif any([wdgt.inherits(tp) for tp in ['QTextEdit', ]]):
             self._label = QLabel(lblText) if lblText else None
             self.LabelText = self._label.text
             self.setLabelText = self._label.setText
 
-            self.Value    = self.setPlainText
-            self.setValue = self.toPlainText
+            self.Value    = wdgt.setPlainText
+            self.setValue = wdgt.toPlainText
 
-            self.natvsignalFldChanged = self.textChanged
+            wdgt.textChanged.connect(self.textChanged)
         # support QPlainTextEdit later
         # elif any([self.inherits(tp) for tp in ['QPlainTextEdit', ]]):
         #     ...
-        elif any([self.inherits(tp) for tp in ['cComboBoxFromDict', 'QComboBox', ]]):
+        elif any([wdgt.inherits(tp) for tp in ['cComboBoxFromDict', 'QComboBox', ]]):
             self._label = QLabel(lblText) if lblText else None
             self.LabelText = self._label.text
             self.setLabelText = self._label.setText
 
-            self.Value    = self.currentData
+            self.Value    = wdgt.currentData
             self.setValue = lambda value: \
-                self.setCurrentText(value) if self.findData(value) == -1 else self.setCurrentIndex(self.findData(value))
+                wdgt.setCurrentText(value) if wdgt.findData(value) == -1 else wdgt.setCurrentIndex(wdgt.findData(value))
 
-            self.activated.connect(self.fldChanged)
-        elif any([self.inherits(tp) for tp in ['QDateEdit', ]]):
+            if isinstance(wdgt, cComboBoxFromDict):
+                self.replaceDict = wdgt.replaceDict
+
+            wdgt.activated.connect(self.fldChanged)
+        elif any([wdgt.inherits(tp) for tp in ['QDateEdit', ]]):
             self._label = QLabel(lblText) if lblText else None
             self.LabelText = self._label.text
             self.setLabelText = self._label.setText
 
-            self.Value    = lambda: self.date().toPython()
-            self.setValue = self.setDate
-            
-            self.userDateChanged.connect(self.fldChanged)
+            self.Value    = lambda: wdgt.date().toPython()
+            self.setValue = wdgt.setDate
+
+            wdgt.userDateChanged.connect(self.fldChanged)
         # support QSpinBox, QDoubleSpinBox, QDateTimeEdit, QTimeEdit ???
         # support QCalendarWidget later
         # elif any([self.inherits(tp) for tp in ['QCalendarWidget', ]]):
-        elif any([self.inherits(tp) for tp in ['QCheckBox', ]]):
-            self.setText(lblText)
-            self.LabelText = self.text
-            self.setLabelText = self.setText
+        elif any([wdgt.inherits(tp) for tp in ['QCheckBox', ]]):
+            wdgt.setText(lblText)
+            self.LabelText = wdgt.text
+            self.setLabelText = wdgt.setText
 
-            self.Value    = self.isChecked
-            self.setValue = lambda value: self.setChecked(value if isinstance(value,bool) else False)
+            self.Value    = wdgt.isChecked
+            self.setValue = lambda value: wdgt.setChecked(value if isinstance(value,bool) else False)
             
             if lblChkBxYesNo:
                 self._lblChkYN:QLineEdit = QLineEdit()
@@ -710,7 +717,7 @@ class cQFmFldWidg(QWidget):
                 self._lblChkYN.setMaximumWidth(40)
                 self._lblChkYN.setFocusPolicy(Qt.FocusPolicy.NoFocus)
 
-            self.checkStateChanged.connect(self.fldChanged)
+            wdgt.checkStateChanged.connect(self.fldChanged)
         # support later: QButtonGroup/QGroupBox
         # support later: QSlider, QDial
         else:
@@ -721,7 +728,7 @@ class cQFmFldWidg(QWidget):
         self.setModelField(modlFld)
         
         # set up the layout
-        layout = QGridLayout(self)
+        layout = QGridLayout()
         #(lblTupl(row,col),wdgtTupl(row,col))
         if alignlblText == Qt.AlignmentFlag.AlignLeft:
             positions = ((0,0),(0,1))
@@ -736,20 +743,20 @@ class cQFmFldWidg(QWidget):
             positions = ((0,0),(0,1))
         
         # place widgets in layout
-        if any([self.inherits(tp) for tp in ['QCheckBox', ]]):
+        if any([wdgt.inherits(tp) for tp in ['QCheckBox', ]]):
             if lblChkBxYesNo:
                 layout.addWidget(self._lblChkYN,*positions[0])
-                layout.addWidget(self,*positions[1])
+                layout.addWidget(wdgt,*positions[1])
             else:
-                layout.addWidget(self,0,0)
+                layout.addWidget(wdgt,0,0)
         else:
             if lblText:
                 layout.addWidget(self._label,*positions[0])
-                layout.addWidget(self,*positions[1])
+                layout.addWidget(wdgt,*positions[1])
             else:
-                layout.addWidget(self,0,0)
+                layout.addWidget(wdgt,0,0)
         #endif a checkbox
-        
+        self.setLayout(layout)
         
 
     def modelField(self) -> str:
@@ -757,18 +764,13 @@ class cQFmFldWidg(QWidget):
     def setModelField(self, fldName:str) -> None:
         self._modlField = fldName
 
-    def  setChecked(self, value:bool) -> None:
-        super().setchecked(value)
-        if self._lblChkYN:
-            self._lblChkYN.setText(self._lblChkYNValues[value])
-
     @Slot()
     def fldChanged(self, *args):
         if self._lblChkYNValues:
             # changeit
             newstate = (args[0] == Qt.CheckState.Checked)
             self._lblChkYN.setText(self._lblChkYNValues[newstate])
-        self.signalFldChanged.emit(*args)
+        self.signalFldChanged.emit(args if args else (None,))
 
 
 ##################################################
