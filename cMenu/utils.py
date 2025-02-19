@@ -371,69 +371,6 @@ class QDjangoTableModel(QAbstractTableModel):
         return None
 
 
-#########################################        
-#########################################        
-
-class NOPETHATSNOTIT(QAbstractListModel):
-    def __init__(self, data:Dict[str,Any], parent:QObject=None):
-        """
-        Initialize the model with a list of dictionaries.
-        
-        Args:
-            data (list of dict): List of dictionaries to model.
-        """
-        super().__init__(parent)
-        self._data = data
-
-    def rowCount(self, parent=None) -> int:
-        """Return the number of rows in the model."""
-        return len(self._data)
-
-    # def columnCount(self, parent=None) -> int:
-    #     """Return the number of columns in the model."""
-    #     return len(self._headers)
-
-    def data(self, index:QModelIndex, role:Qt.ItemDataRole=Qt.DisplayRole) -> Any|None:
-        """Return the data for a given cell."""
-        if not index.isValid() or role != Qt.DisplayRole:
-            return None
-
-        row = index.row()
-        col = index.column()
-        key = self._headers[col]
-        return self._data[row].get(key, None)
-
-    def headerData(self, section:int, orientation:Qt.Orientation, role:Qt.ItemDataRole=Qt.DisplayRole) -> str|int|None:
-        """Return the header labels for rows or columns."""
-        if role != Qt.DisplayRole:
-            return None
-
-        if orientation == Qt.Horizontal:
-            return self._headers[section]  # Column headers (dictionary keys)
-        elif orientation == Qt.Vertical:
-            return str(section + 1)  # Row numbers
-        return None
-
-    def setData(self, index:QModelIndex, value:Any, role:Qt.ItemDataRole=Qt.EditRole) -> bool:
-        """Set the data for a given cell."""
-        if not index.isValid() or role != Qt.EditRole:
-            return False
-
-        row = index.row()
-        col = index.column()
-        key = self._headers[col]
-        self._data[row][key] = value
-        self.dataChanged.emit(index, index, [role])
-        return True
-
-    def flags(self, index:QModelIndex) -> Qt.ItemFlag:
-        """Set flags for each cell."""
-        if not index.isValid():
-            return Qt.NoItemFlags
-
-        return Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable
-
-
 #####################################################
 #####################################################
 #####################################################
@@ -673,74 +610,165 @@ class cQFmFldWidg(QWidget):
     _label:QLabel = None
     _modlField:str = None
     signalFldChanged:Signal = Signal()
+    _lblChkYN:QLineEdit = None
+    _lblChkYNValues:Dict[bool,str]|None = None
 
     def __init__(self, 
         widgType:type[QWidget], 
-        lblText:str = '', alignlblText:Qt.AlignmentFlag = Qt.AlignmentFlag.AlignLeft ,
+        lblText:str = '', 
         lblChkBxYesNo:Dict[bool,str]|None = None,
-        modlFld:str = None, fldSetter:Slot = None, sgnlFldChange:Signal = None,       # fldSetter needed?
-        choices:Dict|List = None,
+        alignlblText:Qt.AlignmentFlag = Qt.AlignmentFlag.AlignLeft ,
+        modlFld:str = None, 
+        choices:Dict|List = None, initval:str = '',
         parent:QWidget = None, 
         ):
-        
-        
-        self = widgType(parent)  # does this have to be by type?
-        super().__init__(parent)
 
-        layout = QGridLayout(self)
+        if any([widgType == cComboBoxFromDict, ] ):
+            self = widgType(choices, parent)
+        elif any([widgType == cDataList, ] ):
+            self = widgType(choices, initval, parent)
+        elif any([widgType == QComboBox, ] ):
+            # don't use this widget if using a model, or
+            # clear(), then addItem()
+            self = widgType(parent)
+            self.addItems(choices)  
+        else:
+            self = widgType(parent)  # does this have to be by type?
+        #endif widgType == cComboBoxFromDict
         
-        lblLabel = QLabel()
+        # print(f'{widgType=}\n{self=}\n{parent=}')
+        # super(widgType).__init__(parent)
+
+        lblText = self.tr(lblText)
         
         # set hooks
         if any([self.inherits(tp) for tp in ['cDataList', ]]):
+            self._label = QLabel(lblText) if lblText else None
+            self.LabelText = self._label.text
+            self.setLabelText = self._label.setText
+
             self.Value    = lambda: self.selectedItem()['keys'][0] if self.selectedItem()['keys'] else self.text()
             self.setValue = self.setText
+
+            self.editingFinished.connect(self.fldChanged)
         elif any([self.inherits(tp) for tp in ['QLineEdit', ]]):
+            self._label = QLabel(lblText) if lblText else None
+            self.LabelText = self._label.text
+            self.setLabelText = self._label.setText
+
             self.Value    = self.text
             self.setValue = self.setText
+
+            self.editingFinished.connect(self.fldChanged)
         elif any([self.inherits(tp) for tp in ['QTextEdit', ]]):
+            self._label = QLabel(lblText) if lblText else None
+            self.LabelText = self._label.text
+            self.setLabelText = self._label.setText
+
             self.Value    = self.setPlainText
             self.setValue = self.toPlainText
+
+            self.natvsignalFldChanged = self.textChanged
         # support QPlainTextEdit later
         # elif any([self.inherits(tp) for tp in ['QPlainTextEdit', ]]):
         #     ...
-        elif any([self.inherits(tp) for tp in ['QComboBox', ]]):
+        elif any([self.inherits(tp) for tp in ['cComboBoxFromDict', 'QComboBox', ]]):
+            self._label = QLabel(lblText) if lblText else None
+            self.LabelText = self._label.text
+            self.setLabelText = self._label.setText
+
             self.Value    = self.currentData
             self.setValue = lambda value: \
                 self.setCurrentText(value) if self.findData(value) == -1 else self.setCurrentIndex(self.findData(value))
+
+            self.activated.connect(self.fldChanged)
         elif any([self.inherits(tp) for tp in ['QDateEdit', ]]):
+            self._label = QLabel(lblText) if lblText else None
+            self.LabelText = self._label.text
+            self.setLabelText = self._label.setText
+
             self.Value    = lambda: self.date().toPython()
             self.setValue = self.setDate
+            
+            self.userDateChanged.connect(self.fldChanged)
         # support QSpinBox, QDoubleSpinBox, QDateTimeEdit, QTimeEdit ???
         # support QCalendarWidget later
         # elif any([self.inherits(tp) for tp in ['QCalendarWidget', ]]):
-        #     ...
         elif any([self.inherits(tp) for tp in ['QCheckBox', ]]):
+            self.setText(lblText)
+            self.LabelText = self.text
+            self.setLabelText = self.setText
+
             self.Value    = self.isChecked
             self.setValue = lambda value: self.setChecked(value if isinstance(value,bool) else False)
+            
+            if lblChkBxYesNo:
+                self._lblChkYN:QLineEdit = QLineEdit()
+                self._lblChkYN.setProperty('noedit', True)
+                self._lblChkYN.setReadOnly(True)
+                self._lblChkYN.setFrame(False)
+                self._lblChkYN.setMaximumWidth(40)
+                self._lblChkYN.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+
+            self.checkStateChanged.connect(self.fldChanged)
         # support later: QButtonGroup/QGroupBox
         # support later: QSlider, QDial
         else:
-            
-            ...
+            raise TypeError(f'type {widgType} is not implemented')
         # endif widget type test
 
         # set the ModelField
         self.setModelField(modlFld)
         
         # set up the layout
+        layout = QGridLayout(self)
+        #(lblTupl(row,col),wdgtTupl(row,col))
+        if alignlblText == Qt.AlignmentFlag.AlignLeft:
+            positions = ((0,0),(0,1))
+        elif alignlblText == Qt.AlignmentFlag.AlignRight:
+            positions = ((0,1),(0,0))
+        elif alignlblText == Qt.AlignmentFlag.AlignTop:
+            positions = ((0,0),(1,0))
+        elif alignlblText == Qt.AlignmentFlag.AlignBottom:
+            positions = ((1,0),(0,0))
+        else:
+            # default to left
+            positions = ((0,0),(0,1))
         
-    
-    def Label(self) -> QLabel:
-        ...
-    def setLabel(self, txt:str) -> None:
-        ...
+        # place widgets in layout
+        if any([self.inherits(tp) for tp in ['QCheckBox', ]]):
+            if lblChkBxYesNo:
+                layout.addWidget(self._lblChkYN,*positions[0])
+                layout.addWidget(self,*positions[1])
+            else:
+                layout.addWidget(self,0,0)
+        else:
+            if lblText:
+                layout.addWidget(self._label,*positions[0])
+                layout.addWidget(self,*positions[1])
+            else:
+                layout.addWidget(self,0,0)
+        #endif a checkbox
+        
+        
 
-    def ModelField(self) -> str:
+    def modelField(self) -> str:
         return self._modlField
     def setModelField(self, fldName:str) -> None:
         self._modlField = fldName
 
+    def  setChecked(self, value:bool) -> None:
+        super().setchecked(value)
+        if self._lblChkYN:
+            self._lblChkYN.setText(self._lblChkYNValues[value])
+
+    @Slot()
+    def fldChanged(self, *args):
+        if self._lblChkYNValues:
+            # changeit
+            newstate = (args[0] == Qt.CheckState.Checked)
+            self._lblChkYN.setText(self._lblChkYNValues[newstate])
+        self.signalFldChanged.emit(*args)
 
 
 ##################################################
@@ -748,14 +776,14 @@ class cQFmFldWidg(QWidget):
 ##################################################
 
 import ast
-
+dividerchar = '\u23FA'
 def show_fns(path_:str):
     # open file as ast (abstract syntax tree)
     with open(path_) as file:
         node = ast.parse(file.read())
 
     # 
-    def show_info(functionNode):
+    def show_info(functionNode:ast.FunctionDef|ast.ClassDef):
         function_rep = ''
         function_rep = functionNode.name + '('
 
@@ -763,7 +791,20 @@ def show_fns(path_:str):
             function_rep += arg.arg + ','
 
         function_rep = function_rep.rstrip(function_rep[-1])
-        function_rep += ')'
+        rNode = functionNode.returns
+        rtype = None
+        if isinstance(rNode, ast.BinOp):
+            rtype = f'{rNode.left.id} | {rNode.right.id}'
+        elif isinstance(rNode, ast.Subscript):
+            rtype = f'{rNode.value.id}'
+        elif isinstance(rNode, ast.Attribute):
+            rtype = f'{rNode.value.id}'
+        elif isinstance(rNode, ast.Constant):
+            rtype = f'{rNode.value}'
+        elif isinstance(rNode, ast.Name):
+            rtype = f'{rNode.id}'
+        #endif rNode tyupe
+        function_rep += f') -> {rtype} {dividerchar} lines {functionNode.lineno} to {functionNode.end_lineno}'
         return function_rep
 
     # get all fns and classes
@@ -772,10 +813,10 @@ def show_fns(path_:str):
     classes = [n for n in node.body if isinstance(n, ast.ClassDef)]
 
     for function in functions:
-        result['functions'].append(show_info(function))
+        result['functions'].append(f'def {show_info(function)}')
 
     for class_ in classes:
-        result['classes'].append(f'class {class_.name}')
+        result['classes'].append(f'class {class_.name}({[NN.id for NN in class_.bases]}) {dividerchar} lines {class_.lineno} to {class_.end_lineno}')
         methods = [n for n in class_.body if isinstance(n, ast.FunctionDef)]
         for method in methods:
             result['classes'].append(f'    def {class_.name}.{show_info(method)}')
