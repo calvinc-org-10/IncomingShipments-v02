@@ -710,6 +710,7 @@ class cQFmFldWidg(QWidget):
             self.setValue = lambda value: wdgt.setChecked(value if isinstance(value,bool) else False)
             
             if lblChkBxYesNo:
+                self._lblChkYNValues = lblChkBxYesNo
                 self._lblChkYN:QLineEdit = QLineEdit()
                 self._lblChkYN.setProperty('noedit', True)
                 self._lblChkYN.setReadOnly(True)
