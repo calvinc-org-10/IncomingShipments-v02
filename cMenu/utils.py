@@ -108,8 +108,6 @@ class cDataList(QLineEdit):
     # addChoices
 
 
-
-
 from PySide6.QtCore import QAbstractTableModel, Qt
 
 class cDictModel(QAbstractTableModel):
@@ -627,11 +625,11 @@ class cQFmFldWidg(QWidget):
         
         super().__init__(parent)
 
-        if any([widgType == cComboBoxFromDict, ] ):
+        if issubclass(widgType,(cComboBoxFromDict, )):
             self._wdgt = widgType(choices, parent)
-        elif any([widgType == cDataList, ] ):
+        elif issubclass(widgType, (cDataList, )):
             self._wdgt = widgType(choices, initval, parent)
-        elif any([widgType == QComboBox, ] ):
+        elif issubclass(widgType, (QComboBox, )):
             # don't use this widget if using a model, or
             # clear(), then addItem()
             self._wdgt = widgType(parent)

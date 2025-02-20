@@ -79,17 +79,6 @@ class cMenu(QWidget):
         self.menuLayout.setColumnMinimumWidth(3,_SCRN_menuBTNWIDTH)
         self.menuLayout.setColumnMinimumWidth(4,40)
         
-        # self.menuLayout.setRowMinimumHeight(1,10)
-        
-        # mWidth = mWidth if mWidth else parent.width()
-        # mHeight = mHeight if mHeight else parent.height()
-        # self.menuScreen.resize(mWidth, mHeight)
-        
-        # self.menuScreen.setLayout(self.menuLayout)
-        
-        # _menu_BTNWIDTH_min = int((mWidth-20)/5)
-        # _menu_BTNWIDTH_max = int((mWidth-20)/2.5)
-        
         self.lblVersion.setFont(QFont("Arial",8))
         # self.lblmenuID.setMargin(10)
         self.lblmenuName.setFrameStyle(QFrame.Panel | QFrame.Sunken)
@@ -113,9 +102,6 @@ class cMenu(QWidget):
             
             self.menuLayout.addWidget(self.menuButton[bNum],bNum+2,1)
             self.menuLayout.addWidget(self.menuButton[bNum+_NUM_menuBTNperCOL],bNum+2,3)
-            
-            # self.menuButton[bNum].setMinimumWidth(_menu_BTNWIDTH_min), self.menuButton[bNum].setMaximumWidth(_menu_BTNWIDTH_max)
-            # self.menuButton[bNum+_NUM_menuBTNperCOL].setMinimumWidth(_menu_BTNWIDTH_min), self.menuButton[bNum+_NUM_menuBTNperCOL].setMaximumWidth(_menu_BTNWIDTH_max)
             
             self.menuButton[bNum].clicked.connect(self.handleMenuButtonClick)
             self.menuButton[bNum+_NUM_menuBTNperCOL].clicked.connect(self.handleMenuButtonClick)
@@ -198,29 +184,11 @@ class cMenu(QWidget):
             frm:QWidget = menucommand_handlers.FormBrowse(self, CommandArg.lower())
             if frm: 
                 self.open_childScreen(CommandArg, frm)
-        #     frm:QWidget = ShowTable(self, CommandArg)
-        #     if frm: 
-        #         frm.show()
-        # elif MENUCOMMANDS.get(CommandNum) == 'RunCode' :
-        #    return
-            # fn = getattr(menucommand_handlers, CommandArg)
-            # retHTTP = fn(req)
         elif MENUCOMMANDS.get(CommandNum) == 'RunSQLStatement':
             CArg = menucommand_handlers._specialforms.RunSQLStatement
             frm:QWidget = menucommand_handlers.FormBrowse(self, CArg)
             if frm: 
                 self.open_childScreen(CArg, frm)
-            # try:
-            #     fn = menucommand_handlers.cMRunSQL
-            #     viewExists = True
-            # except NameError:
-            #     viewExists = False
-            # #end try
-            # if viewExists:
-            #     self.open_childScreen('RunSQL', fn())
-            # else:  
-            #     formname = f'{formname} exists but view menucommand_handlers.cMRunSQL'
-            # #endif
         # elif MENUCOMMANDS.get(CommandNum) == 'ConstructSQLStatement':
         #    pass
         # elif MENUCOMMANDS.get(CommandNum)  == 'LoadExtWebPage':
@@ -234,17 +202,6 @@ class cMenu(QWidget):
             frm:QWidget = menucommand_handlers.FormBrowse(self, CArg)
             if frm: 
                 self.open_childScreen(CArg, frm)
-            # try:
-            #     fn = cEditMenu
-            #     viewExists = True
-            # except NameError:
-            #     viewExists = False
-            # #end try
-            # if viewExists:
-            #     self.open_childScreen('EditMenu', fn())
-            # else:  
-            #     formname = f'{formname} exists but view EditMenu'
-            # #endif
         # elif MENUCOMMANDS.get(CommandNum) == 'EditParameters':
         #     return
             # return redirect('EditParms')

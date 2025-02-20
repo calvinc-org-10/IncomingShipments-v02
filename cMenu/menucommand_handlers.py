@@ -43,6 +43,64 @@ fontFormTitle.setFamilies([u"Copperplate Gothic"])
 fontFormTitle.setPointSize(24)
 
 
+def FormBrowse(parntWind, formname):
+    urlIndex = 0
+    viewIndex = 1
+
+    # theForm = 'Form ' + formname + ' is not built yet.  Calvin needs more coffee.'
+    theForm = None
+    # formname = formname.lower()
+    if formname in FormNameToURL_Map:
+        if FormNameToURL_Map[formname][urlIndex]:
+            # figure out how to repurpose this later
+            # url = FormNameToURL_Map[formname][urlIndex]
+            # try:
+            #     theView = resolve(reverse(url)).func
+            #     urlExists = True
+            # except (Resolver404, NoReverseMatch):
+            #     urlExists = False
+            # # end try
+            # if urlExists:
+            #     theForm = theView(req)
+            # else:
+            #     formname = f'{formname} exists but url {url} '
+            # #endif
+            pass
+        elif FormNameToURL_Map[formname][viewIndex]:
+            try:
+                fn = FormNameToURL_Map[formname][viewIndex]
+                viewExists = True
+            except NameError:
+                viewExists = False
+            #end try
+            if viewExists:
+                # dtheForm = fn(parntWind)
+                theForm = fn()
+            else:  
+                formname = f'{formname} exists but view {FormNameToURL_Map[formname][viewIndex]}'
+            #endif
+    if not theForm:
+        formname = f'Form {formname} is not built yet.  Calvin needs more coffee.'
+        # print(formname)
+        UnderConstruction_Dialog(parntWind, formname).show()
+    else:
+        # print(f'about to show {theForm}')
+        # theForm.show()
+        # print(f'done showing')
+        return theForm
+    # endif
+
+    # must be rendered if theForm came from a class-based-view
+    # if hasattr(theForm,'render'): theForm = theForm.render()
+    # return theForm
+
+def ShowTable(parntWind, tblname):
+    # showing a table is nothing more than another form
+    return FormBrowse(parntWind,tblname)
+
+#####################################################
+#####################################################
+
 class QWGetSQL(QWidget):
     runSQL = Signal(str)    # Emitted with the SQL string when run is clicked
     cancel = Signal()       # Emitted when cancel is clicked    
@@ -324,64 +382,6 @@ class cMRunSQL(QWidget):
 
 ########################################
 ########################################
-
-def FormBrowse(parntWind, formname):
-    urlIndex = 0
-    viewIndex = 1
-
-    # theForm = 'Form ' + formname + ' is not built yet.  Calvin needs more coffee.'
-    theForm = None
-    # formname = formname.lower()
-    if formname in FormNameToURL_Map:
-        if FormNameToURL_Map[formname][urlIndex]:
-            # figure out how to repurpose this later
-            # url = FormNameToURL_Map[formname][urlIndex]
-            # try:
-            #     theView = resolve(reverse(url)).func
-            #     urlExists = True
-            # except (Resolver404, NoReverseMatch):
-            #     urlExists = False
-            # # end try
-            # if urlExists:
-            #     theForm = theView(req)
-            # else:
-            #     formname = f'{formname} exists but url {url} '
-            # #endif
-            pass
-        elif FormNameToURL_Map[formname][viewIndex]:
-            try:
-                fn = FormNameToURL_Map[formname][viewIndex]
-                viewExists = True
-            except NameError:
-                viewExists = False
-            #end try
-            if viewExists:
-                # dtheForm = fn(parntWind)
-                theForm = fn()
-            else:  
-                formname = f'{formname} exists but view {FormNameToURL_Map[formname][viewIndex]}'
-            #endif
-    if not theForm:
-        formname = f'Form {formname} is not built yet.  Calvin needs more coffee.'
-        # print(formname)
-        UnderConstruction_Dialog(parntWind, formname).show()
-    else:
-        # print(f'about to show {theForm}')
-        # theForm.show()
-        # print(f'done showing')
-        return theForm
-    # endif
-
-    # must be rendered if theForm came from a class-based-view
-    # if hasattr(theForm,'render'): theForm = theForm.render()
-    # return theForm
-
-def ShowTable(parntWind, tblname):
-    # showing a table is nothing more than another form
-    return FormBrowse(parntWind,tblname)
-
-#####################################################
-#####################################################
 
 class ORIGcWidgetMenuItem(QWidget):
     def __init__(self, menuitmRec:menuItems, parent:QWidget = None):
