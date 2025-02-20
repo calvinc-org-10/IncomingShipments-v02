@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (QApplication, QWidget, QScrollArea, QMessageBox, 
 from django.apps import apps
 from django.db import models
 from django.db.models import Q, Model
-from cMenu.utils import (cDataList, cDictModel, cComboBoxFromDict, cQRecordsetView, pleaseWriteMe,  )
+from cMenu.utils import (cDataList, cComboBoxFromDict, cQFmFldWidg, cDictModel, cQRecordsetView, pleaseWriteMe,  )
 
 from incShip.models import (
     HBL, ShippingForms, PO, Invoices, Containers, 
@@ -119,7 +119,7 @@ class HBLForm(QWidget):
         if not self.objectName():
             self.setObjectName(u"Form")
         # self.resize(std_windowsize)
-        self.resize(std_windowsize.width(), std_windowsize.height()+150) # this is a temporary fix
+        # self.resize(std_windowsize.width(), std_windowsize.height()+150) # this is a temporary fix
         font = QFont()
         font.setPointSize(12)
         self.setFont(font)
