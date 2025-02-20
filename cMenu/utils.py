@@ -626,16 +626,16 @@ class cQFmFldWidg(QWidget):
         super().__init__(parent)
 
         if issubclass(widgType,(cComboBoxFromDict, )):
-            self._wdgt = widgType(choices, parent)
+            self._wdgt = widgType(choices, self)
         elif issubclass(widgType, (cDataList, )):
-            self._wdgt = widgType(choices, initval, parent)
+            self._wdgt = widgType(choices, initval, self)
         elif issubclass(widgType, (QComboBox, )):
             # don't use this widget if using a model, or
             # clear(), then addItem()
-            self._wdgt = widgType(parent)
+            self._wdgt = widgType(self)
             self._wdgt.addItems(choices)  
         else:
-            self._wdgt = widgType(parent)  # does this have to be by type?
+            self._wdgt = widgType(self)  # does this have to be by type?
         #endif widgType 
         
         lblText = self.tr(lblText)
@@ -756,7 +756,12 @@ class cQFmFldWidg(QWidget):
                 layout.addWidget(wdgt,0,0)
         #endif a checkbox
         self.setLayout(layout)
-        
+
+
+    def __getattr__(self, name):
+        # Delegate attribute access to the contained widget if the attribute
+        # is not found in the cQF instance.
+        return getattr(self._wdgt, name)
 
     def modelField(self) -> str:
         return self._modlField
