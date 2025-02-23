@@ -19,8 +19,9 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     )
 from PySide6.QtWidgets import (QApplication, QWidget, QGridLayout, QHBoxLayout, QVBoxLayout,
     QScrollArea, QCompleter, 
-    QDialog, QMessageBox, 
-    QPushButton, QDialogButtonBox, QLabel, QFrame, QLineEdit, QCheckBox, QComboBox, 
+    QDialog, QMessageBox, QDialogButtonBox, 
+    QPushButton, QLabel, QFrame, QLineEdit, QTextEdit, QPlainTextEdit, QDateEdit, 
+    QCheckBox, QComboBox, 
     QSizePolicy, 
     )
 from PySide6.QtSvgWidgets import QSvgWidget
@@ -107,8 +108,6 @@ class cDataList(QLineEdit):
         self.completer().setModel(newmodel)
     # addChoices
 
-
-from PySide6.QtCore import QAbstractTableModel, Qt
 
 class cDictModel(QAbstractTableModel):
     def __init__(self, data, parent=None):
@@ -625,36 +624,27 @@ class cQFmFldWidg(QWidget):
         
         super().__init__(parent)
 
-        if issubclass(widgType,(cComboBoxFromDict, )):
-            self._wdgt = widgType(choices, self)
-        elif issubclass(widgType, (cDataList, )):
-            self._wdgt = widgType(choices, initval, self)
-        elif issubclass(widgType, (QComboBox, )):
-            # don't use this widget if using a model, or
-            # clear(), then addItem()
-            self._wdgt = widgType(self)
-            self._wdgt.addItems(choices)  
-        else:
-            self._wdgt = widgType(self)  # does this have to be by type?
-        #endif widgType 
+        self._wdgt = self.createWidget(widgType, choices, initval)
         
         lblText = self.tr(lblText)
         wdgt = self._wdgt
         
         # set hooks
-        if any([wdgt.inherits(tp) for tp in ['cDataList', ]]):
-            self._label = QLabel(lblText) if lblText else None
+        # if any([wdgt.inherits(tp) for tp in ['cDataList', ]]):
+        if issubclass(widgType, (cDataList, )):
+            self._label = QLabel(lblText)
             self.LabelText = self._label.text
             self.setLabelText = self._label.setText
 
-            self.Value    = lambda: wdgt.selectedItem()['keys'][0] if wdgt.selectedItem()['keys'] else wdgt.text()
+            self.Value    = wdgt.selectedItem
             self.setValue = wdgt.setText
             
             self.addChoices = wdgt.addChoices
 
             wdgt.editingFinished.connect(self.fldChanged)
-        elif any([wdgt.inherits(tp) for tp in ['QLineEdit', ]]):
-            self._label = QLabel(lblText) if lblText else None
+        # elif any([wdgt.inherits(tp) for tp in ['QLineEdit', ]]):
+        elif issubclass(widgType, (QLineEdit, )):
+            self._label = QLabel(lblText)
             self.LabelText = self._label.text
             self.setLabelText = self._label.setText
 
@@ -662,20 +652,19 @@ class cQFmFldWidg(QWidget):
             self.setValue = wdgt.setText
 
             wdgt.editingFinished.connect(self.fldChanged)
-        elif any([wdgt.inherits(tp) for tp in ['QTextEdit', ]]):
-            self._label = QLabel(lblText) if lblText else None
+        # elif any([wdgt.inherits(tp) for tp in ['QTextEdit', 'QPlainTextEdit' ]]):
+        elif issubclass(widgType, (QTextEdit, QPlainTextEdit, )):
+            self._label = QLabel(lblText)
             self.LabelText = self._label.text
             self.setLabelText = self._label.setText
 
-            self.Value    = wdgt.setPlainText
-            self.setValue = wdgt.toPlainText
+            self.Value    = wdgt.toPlainText
+            self.setValue = wdgt.setPlainText
 
-            wdgt.textChanged.connect(self.textChanged)
-        # support QPlainTextEdit later
-        # elif any([self.inherits(tp) for tp in ['QPlainTextEdit', ]]):
-        #     ...
-        elif any([wdgt.inherits(tp) for tp in ['cComboBoxFromDict', 'QComboBox', ]]):
-            self._label = QLabel(lblText) if lblText else None
+            wdgt.textChanged.connect(self.fldChanged)
+        # elif any([wdgt.inherits(tp) for tp in ['cComboBoxFromDict', 'QComboBox', ]]):
+        elif issubclass(widgType, (cComboBoxFromDict, QComboBox, )):
+            self._label = QLabel(lblText)
             self.LabelText = self._label.text
             self.setLabelText = self._label.setText
 
@@ -683,12 +672,13 @@ class cQFmFldWidg(QWidget):
             self.setValue = lambda value: \
                 wdgt.setCurrentText(value) if wdgt.findData(value) == -1 else wdgt.setCurrentIndex(wdgt.findData(value))
 
-            if isinstance(wdgt, cComboBoxFromDict):
+            if isinstance(widgType, cComboBoxFromDict):
                 self.replaceDict = wdgt.replaceDict
 
             wdgt.activated.connect(self.fldChanged)
-        elif any([wdgt.inherits(tp) for tp in ['QDateEdit', ]]):
-            self._label = QLabel(lblText) if lblText else None
+        # elif any([wdgt.inherits(tp) for tp in ['QDateEdit', ]]):
+        elif issubclass(widgType, (QDateEdit, )):
+            self._label = QLabel(lblText)
             self.LabelText = self._label.text
             self.setLabelText = self._label.setText
 
@@ -699,7 +689,8 @@ class cQFmFldWidg(QWidget):
         # support QSpinBox, QDoubleSpinBox, QDateTimeEdit, QTimeEdit ???
         # support QCalendarWidget later
         # elif any([self.inherits(tp) for tp in ['QCalendarWidget', ]]):
-        elif any([wdgt.inherits(tp) for tp in ['QCheckBox', ]]):
+        # elif any([wdgt.inherits(tp) for tp in ['QCheckBox', ]]):
+        elif issubclass(widgType, (QCheckBox, )):
             wdgt.setText(lblText)
             self.LabelText = wdgt.text
             self.setLabelText = wdgt.setText
@@ -757,6 +748,24 @@ class cQFmFldWidg(QWidget):
         #endif a checkbox
         self.setLayout(layout)
 
+    # this can be overridden in case there are "superclasses"
+    def createWidget(self, widgType:type[QWidget], choices:Dict|List = None, initval:str = '',) -> QWidget:
+        wdgt = None
+        if issubclass(widgType,(cComboBoxFromDict, )):
+            wdgt = widgType(choices, self)
+        elif issubclass(widgType, (cDataList, )):
+            wdgt = widgType(choices, initval, self)
+        elif issubclass(widgType, (QComboBox, )):
+            # don't use this widget if using a model, or
+            # clear(), then addItem()
+            wdgt = widgType(self)
+            wdgt.addItems(choices)  
+        else:
+            wdgt = widgType(self)  # does this have to be by type?
+        #endif widgType 
+            
+        return wdgt
+    #createWidget
 
     def __getattr__(self, name):
         # Delegate attribute access to the contained widget if the attribute

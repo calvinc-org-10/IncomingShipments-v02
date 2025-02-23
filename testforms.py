@@ -50,7 +50,7 @@ class Test01(QWidget):
             self.area1.addWidget(wdgt)
             # print(f'loading record {rec.pk}')
         
-        self.test2 = IncShipAppchoiceWidgets.chooseSmOffInvStatus(self)
+        self.test2 = IncShipAppchoiceWidgets.chooseSmOffInvStatus(parent=self)
         self.test2.setGeometry(1000,200,140,50)
         self.test2.activated.connect(self.show01)
         

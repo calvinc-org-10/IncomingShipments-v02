@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (QApplication, QWidget, QScrollArea, QMessageBox, 
     QComboBox, QDateEdit, QFrame, QCheckBox,
     QLabel, QLineEdit, 
     QPushButton,
-    QSizePolicy, QTabWidget, QTextEdit,
+    QSizePolicy, QTabWidget, QTextEdit, QPlainTextEdit, 
     )
 
 from django.apps import apps
@@ -59,50 +59,77 @@ choices_Container = {rec.pk: str(rec) for rec in Containers.objects.only('pk')}
 
 class IncShipAppchoiceWidgets:
     class chooseHBL(cDataList):
-        def __init__(self, initval = '', parent = None):
-            choices = choices_HBL
+        def __init__(self, choices = choices_HBL, initval = '', parent = None):
             super().__init__(choices, initval, parent)
     class chooseInvoice(cDataList):
-        def __init__(self, initval = '', parent = None):
-            choices = choices_Inv
+        def __init__(self, choices = choices_Inv, initval = '', parent = None):
             super().__init__(choices, initval, parent)
     class choosePO(cDataList):
-        def __init__(self, initval = '', parent = None):
-            choices = choices_PO
+        def __init__(self, choices = choices_PO, initval = '', parent = None):
             super().__init__(choices, initval, parent)
     class chooseShipForm(cDataList):
-        def __init__(self, initval = '', parent = None):
-            choices = choices_ShFm
+        def __init__(self, choices = choices_ShFm, initval = '', parent = None):
             super().__init__(choices, initval, parent)
     class chooseContainer(cDataList):
-        def __init__(self, initval = '', parent = None):
-            choices = choices_Container
+        def __init__(self, choices = choices_Container, initval = '', parent = None):
             super().__init__(choices, initval, parent)
     class chooseCompany(cComboBoxFromDict):
-        def __init__(self, parent = None):
-            dict = Nochoice | { str(x): x.pk for x in Companies.objects.all() }
+        def __init__(self, dict = Nochoice | { str(x): x.pk for x in Companies.objects.all() }, parent = None):
             super().__init__(dict, parent)
     class chooseOrganization(cComboBoxFromDict):
-        def __init__(self, parent = None):
-            dict = Nochoice | { str(x): x.pk for x in Organizations.objects.all() }
+        def __init__(self, dict = Nochoice | { str(x): x.pk for x in Organizations.objects.all() }, parent = None):
             super().__init__(dict, parent)
     class chooseFreightType(cComboBoxFromDict):
-        def __init__(self, parent = None):
-            dict = Nochoice | { str(x): x.pk for x in FreightTypes.objects.all() }
+        def __init__(self, dict = Nochoice | { str(x): x.pk for x in FreightTypes.objects.all() }, parent = None):
             super().__init__(dict, parent)
     class chooseOrigin(cComboBoxFromDict):
-        def __init__(self, parent = None):
-            dict = Nochoice | { str(x): x.pk for x in Origins.objects.all() }
+        def __init__(self, dict = Nochoice | { str(x): x.pk for x in Origins.objects.all() }, parent = None):
             super().__init__(dict, parent)
     # Quote choice classes
     class chooseSmOffInvStatus(cComboBoxFromDict):
-        def __init__(self, parent = None):
-            dict = { x.name: x.value for x in Invoices.SmOffStatusCodes }
+        def __init__(self, dict = { x.name: x.value for x in Invoices.SmOffStatusCodes }, parent = None):
             super().__init__(dict, parent)
     class chooserefTable(cComboBoxFromDict):
-        def __init__(self, parent = None):
-            dict = Nochoice | { x.name: x.value for x in refs.refTblChoices }
+        def __init__(self, dict = Nochoice | { x.name: x.value for x in refs.refTblChoices }, parent = None):
             super().__init__(dict, parent)
+    # List of nested classes - used to check types (see cQFmFldWidg)
+    nested_classes = [
+        chooseHBL,
+        chooseInvoice,
+        choosePO,
+        chooseShipForm,
+        chooseContainer,
+        chooseCompany,
+        chooseOrganization,
+        chooseFreightType,
+        chooseOrigin,
+        chooseSmOffInvStatus,
+        chooserefTable,
+    ]
+
+class incship_cQFmFldWidg(cQFmFldWidg):
+    def __init__(self, 
+        widgType, 
+        lblText = '', lblChkBxYesNo = None, alignlblText = Qt.AlignmentFlag.AlignLeft, 
+        modlFld = None, 
+        choices = None, initval = '', parent = None
+        ):
+        super().__init__(widgType, lblText, lblChkBxYesNo, alignlblText, modlFld, choices, initval, parent)
+        
+    # this can be overriddewn in case there are "superclasses"
+    def createWidget(self, widgType:type[QWidget], choices:Dict|List = None, initval:str = '',) -> QWidget:
+        if widgType in IncShipAppchoiceWidgets.nested_classes:
+            if issubclass(widgType,(cComboBoxFromDict, )):
+                wdgt = widgType(parent=self)
+            elif issubclass(widgType, (cDataList, )):
+                wdgt = widgType(initval=initval, parent=self)
+        else:
+            wdgt = super().createWidget(widgType, choices, initval)
+        #endif widgType 
+            
+        return wdgt
+    #createWidget
+
 
 
 class HBLForm(QWidget):
@@ -110,7 +137,7 @@ class HBLForm(QWidget):
 
     currRec:HBL = HBL()
     linkedRecs:Dict[str, Any] = { tbl: None for tbl in _linkedTables}
-    formFields:Dict[str, Tuple[QWidget, Any]] = {}
+    formFields:Dict[str, Tuple[QWidget, Any]] = {}  # what was I thinking with the tuple? I don't use the second part -- rethink this???
 
     
     def __init__(self, parent:QWidget = None):
@@ -128,8 +155,7 @@ class HBLForm(QWidget):
         
         thisWindowsize = self.size()
 
-        self.layoutwidgetFormHdr = QWidget()
-        self.layoutFormHdr = QGridLayout(self.layoutwidgetFormHdr)
+        self.layoutFormHdr = QGridLayout()
         
         self.lblFormName = QLabel(self)
         wdgt = self.lblFormName
@@ -141,16 +167,15 @@ class HBLForm(QWidget):
         wdgt.setWordWrap(True)
         self.layoutFormHdr.addWidget(wdgt,0,0)
         
-        self.gotoHBL = IncShipAppchoiceWidgets.chooseHBL(parent=self)
+        self.gotoHBL = incship_cQFmFldWidg(IncShipAppchoiceWidgets.chooseHBL,modlFld='id',parent=self)
         wdgt = self.gotoHBL
         wdgt.setObjectName(u"gotoHBL")
         wdgt.setFrame(True)
         wdgt.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
         wdgt.setPlaceholderText('Enter a HBL')
-        wdgt.setProperty('field', 'id')
         self.formFields['id'] = (wdgt, None)
         wdgt.setEnabled(True)       # shouldn't be necessary
-        wdgt.editingFinished.connect(self.getRecordFromGoto)
+        wdgt.signalFldChanged.connect(self.getRecordFromGoto)
         self.lblHBLNotFound = QLabel(self)
         wdgtNF = self.lblHBLNotFound
         palette = QPalette()
@@ -162,169 +187,155 @@ class HBLForm(QWidget):
         self.layoutFormHdr.addWidget(wdgt,1,0)
         self.layoutFormHdr.addWidget(wdgtNF,2,0)
 
-        self.layoutForm.addWidget(self.layoutwidgetFormHdr)
+        self.layoutForm.addLayout(self.layoutFormHdr)
         self.layoutForm.addSpacing(10)
 
-        self.layoutwidgetFormMain = QWidget(self)
-        wdgt = self.layoutwidgetFormMain
-        wdgt.setObjectName(u"gridLayoutWidget")
-        wdgt.setGeometry(QRect(20, 160, thisWindowsize.width()-40, 360))
-        self.layoutFormMain = QGridLayout(self.layoutwidgetFormMain)
+        self.layoutFormMain = QGridLayout()
         self.layoutFormMain.setObjectName(u"layoutForm")
         self.layoutFormMain.setContentsMargins(0, 0, 0, 0)
 
-        self.lblRecID = QLabel(self.layoutwidgetFormMain)
+        self.lblRecID = QLabel()
         wdgt = self.lblRecID
         wdgt.setObjectName(u"label_3")
         self.layoutFormMain.addWidget(wdgt, 0, 6)
 
-        self.comboCompany = IncShipAppchoiceWidgets.chooseCompany(self.layoutwidgetFormMain); self.lblCompany = QLabel(self.layoutwidgetFormMain)
-        wdgt = self.comboCompany; wdgtlbl = self.lblCompany
-        wdgtlbl.setObjectName(u"lblCompany")
-        self.layoutFormMain.addWidget(wdgtlbl, 0, 0)
+
+        self.comboCompany = incship_cQFmFldWidg(IncShipAppchoiceWidgets.chooseCompany, 
+            lblText='Company', alignlblText=Qt.AlignmentFlag.AlignTop, 
+            modlFld='Company')
+        wdgt = self.comboCompany
         wdgt.setObjectName(u"comboCompany")
-        wdgt.setProperty('field', 'Company')
         self.formFields['Company'] = (wdgt, None)
-        wdgt.currentIndexChanged.connect(lambda indx: self.changeField(self.comboCompany))
+        wdgt.signalFldChanged.connect(lambda indx: self.changeField(self.comboCompany))
         self.layoutFormMain.addWidget(wdgt, 1, 0)
 
-        self.lnedHBLNumber = QLineEdit(self.layoutwidgetFormMain); self.lblHBLNumber = QLabel(self.layoutwidgetFormMain)
-        wdgt = self.lnedHBLNumber; wdgtlbl = self.lblHBLNumber
-        wdgtlbl.setObjectName(u"lblHBLNumber")
-        self.layoutFormMain.addWidget(wdgtlbl, 0, 1)
+        self.lnedHBLNumber = cQFmFldWidg(QLineEdit, 
+            lblText='HBL Number', alignlblText=Qt.AlignmentFlag.AlignTop,
+            modlFld='HBLNumber')
+        wdgt = self.lnedHBLNumber
         wdgt.setObjectName(u"lnedHBLNumber")
-        wdgt.setProperty('field', 'HBLNumber')
         self.formFields['HBLNumber'] = (wdgt, None)
         #TODO: write Slot to check if HBL exists
-        wdgt.editingFinished.connect(lambda: self.changeField(self.lnedHBLNumber))
+        wdgt.signalFldChanged.connect(lambda: self.changeField(self.lnedHBLNumber))
         self.layoutFormMain.addWidget(wdgt, 1, 1)
 
-        self.comboFreightType = IncShipAppchoiceWidgets.chooseFreightType(self.layoutwidgetFormMain); self.lblFreightType = QLabel(self.layoutwidgetFormMain)
-        wdgt = self.comboFreightType; wdgtlbl = self.lblFreightType
-        wdgtlbl.setObjectName(u"lblFreightType")
-        self.layoutFormMain.addWidget(wdgtlbl, 0, 2)
+        self.comboFreightType = incship_cQFmFldWidg(IncShipAppchoiceWidgets.chooseFreightType, 
+            lblText='Freight Type', alignlblText=Qt.AlignmentFlag.AlignTop,
+            modlFld='FreightType')
+        wdgt = self.comboFreightType
         wdgt.setObjectName(u"comboFreightType")
-        wdgt.setProperty('field', 'FreightType')
         self.formFields['FreightType'] = (wdgt, None)
-        wdgt.currentIndexChanged.connect(lambda indx: self.changeField(self.comboFreightType))
+        wdgt.signalFldChanged.connect(lambda indx: self.changeField(self.comboFreightType))
         self.layoutFormMain.addWidget(wdgt, 1, 2)
 
-        self.comboOrigin = IncShipAppchoiceWidgets.chooseOrigin(self.layoutwidgetFormMain); self.lblOrigin = QLabel(self.layoutwidgetFormMain)
-        wdgt = self.comboOrigin; wdgtlbl = self.lblOrigin
-        wdgtlbl.setObjectName(u"lblOrigin")
-        self.layoutFormMain.addWidget(wdgtlbl, 0, 3)
+        self.comboOrigin = incship_cQFmFldWidg(IncShipAppchoiceWidgets.chooseOrigin, 
+            lblText='Origin', alignlblText=Qt.AlignmentFlag.AlignTop,
+            modlFld='Origin')
+        wdgt = self.comboOrigin
         wdgt.setObjectName(u"comboOrigin")
-        wdgt.setProperty('field', 'Origin')
         self.formFields['Origin'] = (wdgt, None)
-        wdgt.currentIndexChanged.connect(lambda indx: self.changeField(self.comboOrigin))
+        wdgt.signalFldChanged.connect(lambda indx: self.changeField(self.comboOrigin))
         self.layoutFormMain.addWidget(wdgt, 1, 3)
 
-        self.lnedtIncoterm = QLineEdit(self.layoutwidgetFormMain); self.lblIncoTerm = QLabel(self.layoutwidgetFormMain)
-        wdgt = self.lnedtIncoterm; wdgtlbl = self.lblIncoTerm
-        wdgtlbl.setObjectName(u"lblIncoTerm")
-        self.layoutFormMain.addWidget(wdgtlbl, 0, 4)
+        self.lnedtIncoterm = cQFmFldWidg(QLineEdit,
+            lblText='incoterm', alignlblText=Qt.AlignmentFlag.AlignTop,
+            modlFld='incoterm')
+        wdgt = self.lnedtIncoterm
         wdgt.setObjectName(u"lnedtIncoterm")
-        wdgt.setProperty('field', 'incoterm')
         self.formFields['incoterm'] = (wdgt, None)
-        wdgt.editingFinished.connect(lambda: self.changeField(self.lnedtIncoterm))
+        wdgt.signalFldChanged.connect(lambda: self.changeField(self.lnedtIncoterm))
         self.layoutFormMain.addWidget(wdgt, 1, 4)
 
-        # self.dtedtPickupDt = QDateEdit(self.layoutwidgetFormMain); self.lblPickupDt = QLabel(self.layoutwidgetFormMain)
-        self.dtedtPickupDt = QDateEdit(); self.lblPickupDt = QLabel()
-        wdgt = self.dtedtPickupDt; wdgtlbl = self.lblPickupDt
-        # self.layoutFormMain.addWidget(wdgtlbl, 2, 0)
+        self.dtedtPickupDt = cQFmFldWidg(QDateEdit,
+            lblText='Pickup Date', alignlblText=Qt.AlignmentFlag.AlignTop,
+            modlFld='PickupDt')
+        wdgt = self.dtedtPickupDt
         wdgt.setDisplayFormat(_DATE_FORMAT)
         wdgt.setSpecialValueText('---')
-        wdgt.setProperty('field', 'PickupDt')
         self.formFields['PickupDt'] = (wdgt, None)
-        wdgt.userDateChanged.connect(lambda: self.changeField(self.dtedtPickupDt))
+        wdgt.signalFldChanged.connect(lambda: self.changeField(self.dtedtPickupDt))
         # self.layoutFormMain.addWidget(wdgt, 3, 0)
 
-        self.dtedtETA = QDateEdit(self.layoutwidgetFormMain); self.lblETA = QLabel(self.layoutwidgetFormMain)
-        wdgt = self.dtedtETA; wdgtlbl = self.lblETA
-        wdgtlbl.setObjectName(u"lblETA")
-        self.layoutFormMain.addWidget(wdgtlbl, 2, 0)
+        self.dtedtETA = cQFmFldWidg(QDateEdit,
+            lblText='ETA', alignlblText=Qt.AlignmentFlag.AlignTop,
+            modlFld='ETA')
+        wdgt = self.dtedtETA
         wdgt.setObjectName(u"dtedtETA")
         wdgt.setDisplayFormat(_DATE_FORMAT)
         wdgt.setSpecialValueText('---')
-        wdgt.setProperty('field', 'ETA')
         self.formFields['ETA'] = (wdgt, None)
-        wdgt.userDateChanged.connect(lambda: self.changeField(self.dtedtETA))
+        wdgt.signalFldChanged.connect(lambda: self.changeField(self.dtedtETA))
         self.layoutFormMain.addWidget(wdgt, 3, 0)
 
-        self.dtedtLFD = QDateEdit(self.layoutwidgetFormMain); self.lblLFD = QLabel(self.layoutwidgetFormMain)
-        wdgt = self.dtedtLFD; wdgtlbl = self.lblLFD
-        wdgtlbl.setObjectName(u"lblLFD")
-        self.layoutFormMain.addWidget(wdgtlbl, 2, 1)
+        self.dtedtLFD = cQFmFldWidg(QDateEdit,
+            lblText='LFD', alignlblText=Qt.AlignmentFlag.AlignTop,
+            modlFld='LFD')
+        wdgt = self.dtedtLFD
         wdgt.setObjectName(u"dtedtLFD")
         wdgt.setDisplayFormat(_DATE_FORMAT)
-        wdgt.setProperty('field', 'LFD')
         self.formFields['LFD'] = (wdgt, None)
-        wdgt.userDateChanged.connect(lambda: self.changeField(self.dtedtLFD))
+        wdgt.signalFldChanged.connect(lambda: self.changeField(self.dtedtLFD))
         self.layoutFormMain.addWidget(wdgt, 3, 1)
 
-        self.lnedtChgWt = QLineEdit(self.layoutwidgetFormMain); self.lblChgWt = QLabel(self.layoutwidgetFormMain)
-        wdgt = self.lnedtChgWt; wdgtlbl = self.lblChgWt
-        wdgtlbl.setObjectName(u"lblChgWt")
-        self.layoutFormMain.addWidget(wdgtlbl, 2, 2)
+        self.lnedtChgWt = cQFmFldWidg(QLineEdit,
+            lblText='Chgbl Weight', alignlblText=Qt.AlignmentFlag.AlignTop,
+            modlFld='ChargeableWeight')
+        wdgt = self.lnedtChgWt
         wdgt.setObjectName(u"lnedtChgWt")
-        wdgt.setProperty('field', 'ChargeableWeight')
         self.formFields['ChargeableWeight'] = (wdgt, None)
-        wdgt.editingFinished.connect(lambda: self.changeField(self.lnedtChgWt))
+        wdgt.signalFldChanged.connect(lambda: self.changeField(self.lnedtChgWt))
         self.layoutFormMain.addWidget(wdgt, 3, 2)
 
-        self.lnedtPcs = QLineEdit(self.layoutwidgetFormMain); self.lblPcs = QLabel(self.layoutwidgetFormMain)
-        wdgt = self.lnedtPcs; wdgtlbl = self.lblPcs
-        wdgtlbl.setObjectName(u"lblPcs")
-        self.layoutFormMain.addWidget(wdgtlbl, 2, 3)
+        self.lnedtPcs = cQFmFldWidg(QLineEdit,
+            lblText='Pieces', alignlblText=Qt.AlignmentFlag.AlignTop,
+            modlFld='Pieces')
+        wdgt = self.lnedtPcs
         wdgt.setObjectName(u"lnedtPcs")
-        wdgt.setProperty('field', 'Pieces')
         self.formFields['Pieces'] = (wdgt, None)
-        wdgt.editingFinished.connect(lambda: self.changeField(self.lnedtPcs))
+        wdgt.signalFldChanged.connect(lambda: self.changeField(self.lnedtPcs))
         self.layoutFormMain.addWidget(wdgt, 3, 3)
 
-        self.lnedtVolume = QLineEdit(self.layoutwidgetFormMain); self.lblVolume = QLabel(self.layoutwidgetFormMain)
-        wdgt = self.lnedtVolume; wdgtlbl = self.lblVolume
-        wdgtlbl.setObjectName(u"lblVolume")
-        self.layoutFormMain.addWidget(wdgtlbl, 2, 4)
+        self.lnedtVolume = cQFmFldWidg(QLineEdit,
+            lblText='Volume', alignlblText=Qt.AlignmentFlag.AlignTop,
+            modlFld='Volume')
+        wdgt = self.lnedtVolume
         wdgt.setObjectName(u"lnedtVolume")
-        wdgt.setProperty('field', 'Volume')
         self.formFields['Volume'] = (wdgt, None)
-        wdgt.editingFinished.connect(lambda: self.changeField(self.lnedtVolume))
+        wdgt.signalFldChanged.connect(lambda: self.changeField(self.lnedtVolume))
         self.layoutFormMain.addWidget(wdgt, 3, 4)
 
-        self.txtedtNotes = QTextEdit(self.layoutwidgetFormMain); self.lblNotes = QLabel(self.layoutwidgetFormMain)
-        wdgt = self.txtedtNotes; wdgtlbl = self.lblNotes
-        wdgtlbl.setObjectName(u"lblNotes")
+        # self.txtedtNotes = cQFmFldWidg(QTextEdit,   # this should be a QTextEdit, but at the moment its crashing on setText. I gotta figger out why
+        self.txtedtNotes = cQFmFldWidg(QPlainTextEdit,
+            lblText='notes', alignlblText=Qt.AlignmentFlag.AlignTop,
+            modlFld='notes')
+        wdgt = self.txtedtNotes
         wdgt.setObjectName(u"txtedtNotes")
-        wdgt.setProperty('field', 'notes')
         self.formFields['notes'] = (wdgt, None)
-        wdgt.textChanged.connect(lambda: self.changeField(self.txtedtNotes))
-        self.layoutFormMain.addWidget(wdgtlbl, 4, 1, Qt.AlignmentFlag.AlignBottom)
+        wdgt.signalFldChanged.connect(lambda: self.changeField(self.txtedtNotes))
         self.layoutFormMain.addWidget(wdgt, 5, 1, 3, 4)
 
-        self.listWidgetPO = QListWidget(self.layoutwidgetFormMain)
+        self.listWidgetPO = QListWidget()
         wdgt = self.listWidgetPO
         wdgt.setObjectName(u"listWidgetPO")
         wdgt.setProperty('field', 'POList')
         self.formFields['POList'] = (wdgt, None)
         wdgt.itemClicked.connect(lambda item: pleaseWriteMe(self, 'PO clicks'))
         wdgt.itemDoubleClicked.connect(lambda item: pleaseWriteMe(self, 'PO doubleclicks'))
-        self.btnAddPO = QPushButton(self.layoutwidgetFormMain)
+        self.btnAddPO = QPushButton()
         wdgtadd = self.btnAddPO
         wdgtadd.setObjectName(u"btnAddPO")
         wdgtadd.clicked.connect(lambda: self.addPOToHBL())
         self.layoutFormMain.addWidget(wdgt, 1, 5, 5, 1)
         self.layoutFormMain.addWidget(wdgtadd, 3, 6)
 
-        self.listWidgetShpFms = QListWidget(self.layoutwidgetFormMain)
+        self.listWidgetShpFms = QListWidget()
         wdgt = self.listWidgetShpFms
         wdgt.setObjectName(u"listWidgetShpFms")
         wdgt.setProperty('field', 'ShippingForms')
         self.formFields['ShippingForms'] = (wdgt, None)
         wdgt.itemClicked.connect(lambda item: pleaseWriteMe(self, 'ShpFms clicks'))
         wdgt.itemDoubleClicked.connect(lambda item: pleaseWriteMe(self, 'ShpFms doubleclicks'))
-        self.btnAddShpFms = QPushButton(self.layoutwidgetFormMain)
+        self.btnAddShpFms = QPushButton()
         wdgtadd = self.btnAddShpFms
         wdgtadd.setObjectName(u"btnAddShpFms")
         wdgtadd.clicked.connect(lambda: self.addShipFmToHBL())
@@ -337,14 +348,12 @@ class HBLForm(QWidget):
         # self.verticalSpacer2 = QSpacerItem(20, 20, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
         # self.layoutForm.addItem(self.verticalSpacer2, 8, 0)
 
-        self.layoutForm.addWidget(self.layoutwidgetFormMain)
+        self.layoutForm.addLayout(self.layoutFormMain)
         self.layoutForm.addSpacing(10)
 
-        self.layoutwidgetFormMainBtm = QWidget(self)
-        self.layoutFormMainBtm = QVBoxLayout(self.layoutwidgetFormMainBtm)
+        self.layoutFormMainBtm = QVBoxLayout()
         self.tabsetHBLInfo = QTabWidget(self)
         self.tabsetHBLInfo.setObjectName(u"tabsetHBLInfo")
-        # self.tabsetHBLInfo.setGeometry(QRect(20, 524, thisWindowsize.width()-40, 280))
 
         self.tabInvoices = QWidget()
         self.tabInvoices.setObjectName(u"tab1")
@@ -403,27 +412,13 @@ class HBLForm(QWidget):
         self.tabsetHBLInfo.addTab(self.tabrefs, "")
         
         self.layoutFormMainBtm.addWidget(self.tabsetHBLInfo)
-        self.layoutForm.addWidget(self.layoutwidgetFormMainBtm)
+        self.layoutForm.addLayout(self.layoutFormMainBtm)
 
-        self.btnCommit = QPushButton(self.layoutwidgetFormHdr)
+        self.btnCommit = QPushButton()
         self.btnCommit.setObjectName(u"btnCommit")
         self.btnCommit.clicked.connect(lambda: self.writeRecord())
         # self.btnCommit.setGeometry(QRect(820, 60, 101, 61))
         self.layoutFormHdr.addWidget(self.btnCommit,0,1,2,1)
-
-#if QT_CONFIG(shortcut)
-        self.lblOrigin.setBuddy(self.comboOrigin)
-        self.lblChgWt.setBuddy(self.lnedtChgWt)
-        self.lblIncoTerm.setBuddy(self.lnedtIncoterm)
-        self.lblVolume.setBuddy(self.lnedtVolume)
-        self.lblLFD.setBuddy(self.dtedtLFD)
-        self.lblFreightType.setBuddy(self.comboFreightType)
-        self.lblPcs.setBuddy(self.lnedtPcs)
-        self.lblETA.setBuddy(self.dtedtETA)
-        self.lblCompany.setBuddy(self.comboCompany)
-        self.lblHBLNumber.setBuddy(self.lnedHBLNumber)
-        self.lblNotes.setBuddy(self.txtedtNotes)
-#endif // QT_CONFIG(shortcut)
 
         QWidget.setTabOrder(self.comboCompany, self.lnedHBLNumber)
         QWidget.setTabOrder(self.lnedHBLNumber, self.comboFreightType)
@@ -458,17 +453,17 @@ class HBLForm(QWidget):
     def retranslateUi(self):
         self.setWindowTitle(QCoreApplication.translate("Form", u"HBL", None))
 
-        self.lblOrigin.setText(QCoreApplication.translate("Form", u"Origin", None))
-        self.lblChgWt.setText(QCoreApplication.translate("Form", u"Chgbl Weight", None))
-        self.lblIncoTerm.setText(QCoreApplication.translate("Form", u"incoterm", None))
-        self.lblVolume.setText(QCoreApplication.translate("Form", u"Volume", None))
-        self.lblLFD.setText(QCoreApplication.translate("Form", u"LFD", None))
-        self.lblFreightType.setText(QCoreApplication.translate("Form", u"Freight Type", None))
-        self.lblPcs.setText(QCoreApplication.translate("Form", u"Pieces", None))
-        self.lblETA.setText(QCoreApplication.translate("Form", u"ETA", None))
-        self.lblCompany.setText(QCoreApplication.translate("Form", u"Company", None))
-        self.lblHBLNumber.setText(QCoreApplication.translate("Form", u"HBL Number", None))
-        self.lblNotes.setText(QCoreApplication.translate("Form", u"Notes", None))
+        # self.lblOrigin.setText(QCoreApplication.translate("Form", u"Origin", None))
+        # self.lblChgWt.setText(QCoreApplication.translate("Form", u"Chgbl Weight", None))
+        # self.lblIncoTerm.setText(QCoreApplication.translate("Form", u"incoterm", None))
+        # self.lblVolume.setText(QCoreApplication.translate("Form", u"Volume", None))
+        # self.lblLFD.setText(QCoreApplication.translate("Form", u"LFD", None))
+        # self.lblFreightType.setText(QCoreApplication.translate("Form", u"Freight Type", None))
+        # self.lblPcs.setText(QCoreApplication.translate("Form", u"Pieces", None))
+        # self.lblETA.setText(QCoreApplication.translate("Form", u"ETA", None))
+        # self.lblCompany.setText(QCoreApplication.translate("Form", u"Company", None))
+        # self.lblHBLNumber.setText(QCoreApplication.translate("Form", u"HBL Number", None))
+        # self.lblNotes.setText(QCoreApplication.translate("Form", u"Notes", None))
         self.lblFormName.setText(QCoreApplication.translate("Form", u"HBL", None))
 
         self.btnCommit.setText(QCoreApplication.translate('Form','Commit\nChanges',None))
@@ -489,7 +484,8 @@ class HBLForm(QWidget):
     def getRecordFromGoto(self) -> None:
         #TODO: check if dirty
 
-        slctd = self.gotoHBL.selectedItem()
+        # slctd = self.gotoHBL.selectedItem()
+        slctd = self.gotoHBL.Value()
         HBLNumber = slctd['text']
         # id = wdgt.currentData()
         id = slctd['keys'][0] if len(slctd['keys']) else None
@@ -652,7 +648,7 @@ class HBLForm(QWidget):
 
         for field in cRec._meta.get_fields():
             # special cases: ShippingForms, POList, containers, invoices:
-            if field.name in ['ShippingForms', 'POList', 'Invoices', 'Containers', 'reference_ties']:
+            if field.name in ['ShippingForms', 'POList', 'invoices', 'containers', 'references']:
                 continue
 
             field_value = getattr(cRec, field.name, None)
@@ -668,26 +664,29 @@ class HBLForm(QWidget):
             if field.name in forgnKeys:
                 field_valueStr = str(forgnKeys[field.name])
             
-            for wdgt in self.findChildren(QWidget):
-                if wdgt.property('field') == field.name:
-                    # set wdgt value to field_value
-                    # must set value per widget type
-                    if any([wdgt.inherits(tp) for tp in ['QLineEdit', ]]):
-                        wdgt.setText(field_valueStr)
-                    elif any([wdgt.inherits(tp) for tp in ['QTextEdit', ]]):
-                        wdgt.setPlainText(field_valueStr)
-                    elif any([wdgt.inherits(tp) for tp in ['QComboBox', ]]):
-                        chNum = wdgt.findData(field_valueStr)
-                        if chNum == -1: 
-                            wdgt.setCurrentText(field_valueStr)
-                        else:
-                            wdgt.setCurrentIndex(chNum)
-                        #endif findData valid
-                    elif any([wdgt.inherits(tp) for tp in ['QDateEdit', ]]):
-                        wdgt.setDate(field_value)
-                    # endif widget type test
+            if field.name in self.formFields:
+                wdgt = self.formFields[field.name][0]
+                wdgt.setValue(field_valueStr)
+            # for wdgt in self.findChildren(QWidget):
+            #     if wdgt.property('field') == field.name:
+            #         # set wdgt value to field_value
+            #         # must set value per widget type
+            #         if any([wdgt.inherits(tp) for tp in ['QLineEdit', ]]):
+            #             wdgt.setText(field_valueStr)
+            #         elif any([wdgt.inherits(tp) for tp in ['QTextEdit', ]]):
+            #             wdgt.setPlainText(field_valueStr)
+            #         elif any([wdgt.inherits(tp) for tp in ['QComboBox', ]]):
+            #             chNum = wdgt.findData(field_valueStr)
+            #             if chNum == -1: 
+            #                 wdgt.setCurrentText(field_valueStr)
+            #             else:
+            #                 wdgt.setCurrentIndex(chNum)
+            #             #endif findData valid
+            #         elif any([wdgt.inherits(tp) for tp in ['QDateEdit', ]]):
+            #             wdgt.setDate(field_value)
+            #         # endif widget type test
 
-                    break   # we found the widget for this field; we don't need to test other widgets
+            #         break   # we found the widget for this field; we don't need to test other widgets
                             # move on to the next field
                 # endif wdgt field = field.name
             # endfor wdgt in self.children()
@@ -903,7 +902,7 @@ class Invoice_singleForm(QWidget):
         self.gridLayout.addWidget(wdgt, 1, 2)
 
         self.lblSmOffStat = QLabel(self)
-        self.cmbSmOffStat = IncShipAppchoiceWidgets.chooseSmOffInvStatus(self)
+        self.cmbSmOffStat = IncShipAppchoiceWidgets.chooseSmOffInvStatus(parent=self)
         wdgt = self.cmbSmOffStat; wdgtlbl = self.lblSmOffStat
         wdgtlbl.setObjectName(u"label_2")
         wdgt.setObjectName(u"comboBox")
@@ -913,7 +912,7 @@ class Invoice_singleForm(QWidget):
         self.gridLayout.addWidget(wdgt, 1, 4)
 
         self.lblCompany = QLabel(self)
-        self.cmbCompany = IncShipAppchoiceWidgets.chooseCompany(self)
+        self.cmbCompany = IncShipAppchoiceWidgets.chooseCompany(parent=self)
         wdgt = self.cmbCompany; wdgtlbl = self.lblCompany
         wdgtlbl.setObjectName(u"label_4")
         wdgt.setObjectName(u"comboBox_2")
@@ -954,7 +953,7 @@ class Invoice_singleForm(QWidget):
         self.gridLayout.addWidget(wdgt, 2, 8)
 
         self.lblHBL = QLabel(self)
-        self.dlistHBL = IncShipAppchoiceWidgets.chooseHBL(str(InvRec.HBL) if InvRec else '', self)
+        self.dlistHBL = IncShipAppchoiceWidgets.chooseHBL(initval=str(InvRec.HBL) if InvRec else '', parent=self)
         wdgt = self.dlistHBL; wdgtlbl = self.lblHBL
         wdgtlbl.setObjectName(u"label_8")
         wdgt.setObjectName(u"lineEdit_4")
@@ -964,7 +963,7 @@ class Invoice_singleForm(QWidget):
         self.gridLayout.addWidget(wdgt, 3, 2)
 
         self.lblAddlBillInv = QLabel(self)
-        self.dlistAddlBillInv = IncShipAppchoiceWidgets.chooseInvoice(str(InvRec.AddlBillingForInv) if InvRec else '', self)
+        self.dlistAddlBillInv = IncShipAppchoiceWidgets.chooseInvoice(initval=str(InvRec.AddlBillingForInv) if InvRec else '', parent=self)
         wdgt = self.dlistAddlBillInv; wdgtlbl = self.lblAddlBillInv
         wdgtlbl.setObjectName(u"label_10")
         wdgt.setObjectName(u"lineEdit_5")
