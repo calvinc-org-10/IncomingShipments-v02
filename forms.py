@@ -1122,6 +1122,7 @@ class Invoice_singleForm(QWidget):
             if field.name in self.formFields:
                 wdgt = self.formFields[field.name]
                 wdgt.setValue(field_valueStr)
+    #RESTART HERE
             # for wdgt in self.findChildren(QWidget):
             #     if wdgt.property('field') == field.name:
             #         # set wdgt value to field_value
