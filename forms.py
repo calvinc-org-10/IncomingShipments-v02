@@ -133,7 +133,7 @@ class incship_cQFmFldWidg(cQFmFldWidg):
 
 
 class HBLForm(QWidget):
-    _linkedTables = ['ShippingForms', 'PO', 'Invoices', 'Containers', 'reference_ties']
+    _linkedTables = ['ShippingForms', 'PO', 'Invoices', 'Containers', 'references']
 
     currRec:HBL = HBL()
     linkedRecs:Dict[str, Any] = { tbl: None for tbl in _linkedTables}
@@ -167,13 +167,14 @@ class HBLForm(QWidget):
         wdgt.setWordWrap(True)
         self.layoutFormHdr.addWidget(wdgt,0,0)
         
-        self.gotoHBL = incship_cQFmFldWidg(IncShipAppchoiceWidgets.chooseHBL,modlFld='id',parent=self)
+        modlFld = 'id'
+        self.gotoHBL = incship_cQFmFldWidg(IncShipAppchoiceWidgets.chooseHBL,modlFld=modlFld,parent=self)
         wdgt = self.gotoHBL
         wdgt.setObjectName(u"gotoHBL")
         wdgt.setFrame(True)
         wdgt.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
         wdgt.setPlaceholderText('Enter a HBL')
-        self.formFields['id'] = (wdgt, None)
+        self.formFields[modlFld] = (wdgt, None)
         wdgt.setEnabled(True)       # shouldn't be necessary
         wdgt.signalFldChanged.connect(self.getRecordFromGoto)
         self.lblHBLNotFound = QLabel(self)
@@ -199,126 +200,137 @@ class HBLForm(QWidget):
         wdgt.setObjectName(u"label_3")
         self.layoutFormMain.addWidget(wdgt, 0, 6)
 
-
+        modlFld = 'Company'
         self.comboCompany = incship_cQFmFldWidg(IncShipAppchoiceWidgets.chooseCompany, 
             lblText='Company', alignlblText=Qt.AlignmentFlag.AlignTop, 
-            modlFld='Company')
+            modlFld=modlFld)
         wdgt = self.comboCompany
         wdgt.setObjectName(u"comboCompany")
-        self.formFields['Company'] = (wdgt, None)
+        self.formFields[modlFld] = (wdgt, None)
         wdgt.signalFldChanged.connect(lambda indx: self.changeField(self.comboCompany))
         self.layoutFormMain.addWidget(wdgt, 1, 0)
 
+        modlFld = 'HBLNumber'
         self.lnedHBLNumber = cQFmFldWidg(QLineEdit, 
             lblText='HBL Number', alignlblText=Qt.AlignmentFlag.AlignTop,
-            modlFld='HBLNumber')
+            modlFld=modlFld)
         wdgt = self.lnedHBLNumber
         wdgt.setObjectName(u"lnedHBLNumber")
-        self.formFields['HBLNumber'] = (wdgt, None)
+        self.formFields[modlFld] = (wdgt, None)
         #TODO: write Slot to check if HBL exists
         wdgt.signalFldChanged.connect(lambda: self.changeField(self.lnedHBLNumber))
         self.layoutFormMain.addWidget(wdgt, 1, 1)
 
+        modlFld = 'FreightType'
         self.comboFreightType = incship_cQFmFldWidg(IncShipAppchoiceWidgets.chooseFreightType, 
             lblText='Freight Type', alignlblText=Qt.AlignmentFlag.AlignTop,
-            modlFld='FreightType')
+            modlFld=modlFld)
         wdgt = self.comboFreightType
         wdgt.setObjectName(u"comboFreightType")
-        self.formFields['FreightType'] = (wdgt, None)
+        self.formFields[modlFld] = (wdgt, None)
         wdgt.signalFldChanged.connect(lambda indx: self.changeField(self.comboFreightType))
         self.layoutFormMain.addWidget(wdgt, 1, 2)
 
+        modlFld = 'Origin'
         self.comboOrigin = incship_cQFmFldWidg(IncShipAppchoiceWidgets.chooseOrigin, 
             lblText='Origin', alignlblText=Qt.AlignmentFlag.AlignTop,
-            modlFld='Origin')
+            modlFld=modlFld)
         wdgt = self.comboOrigin
         wdgt.setObjectName(u"comboOrigin")
-        self.formFields['Origin'] = (wdgt, None)
+        self.formFields[modlFld] = (wdgt, None)
         wdgt.signalFldChanged.connect(lambda indx: self.changeField(self.comboOrigin))
         self.layoutFormMain.addWidget(wdgt, 1, 3)
 
+        modlFld = 'incoterm'
         self.lnedtIncoterm = cQFmFldWidg(QLineEdit,
             lblText='incoterm', alignlblText=Qt.AlignmentFlag.AlignTop,
-            modlFld='incoterm')
+            modlFld=modlFld)
         wdgt = self.lnedtIncoterm
         wdgt.setObjectName(u"lnedtIncoterm")
-        self.formFields['incoterm'] = (wdgt, None)
+        self.formFields[modlFld] = (wdgt, None)
         wdgt.signalFldChanged.connect(lambda: self.changeField(self.lnedtIncoterm))
         self.layoutFormMain.addWidget(wdgt, 1, 4)
 
+        modlFld = 'PickupDt'
         self.dtedtPickupDt = cQFmFldWidg(QDateEdit,
             lblText='Pickup Date', alignlblText=Qt.AlignmentFlag.AlignTop,
-            modlFld='PickupDt')
+            modlFld=modlFld)
         wdgt = self.dtedtPickupDt
         wdgt.setDisplayFormat(_DATE_FORMAT)
         wdgt.setSpecialValueText('---')
-        self.formFields['PickupDt'] = (wdgt, None)
+        self.formFields[modlFld] = (wdgt, None)
         wdgt.signalFldChanged.connect(lambda: self.changeField(self.dtedtPickupDt))
         # self.layoutFormMain.addWidget(wdgt, 3, 0)
 
+        modlFld = 'ETA'
         self.dtedtETA = cQFmFldWidg(QDateEdit,
             lblText='ETA', alignlblText=Qt.AlignmentFlag.AlignTop,
-            modlFld='ETA')
+            modlFld=modlFld)
         wdgt = self.dtedtETA
         wdgt.setObjectName(u"dtedtETA")
         wdgt.setDisplayFormat(_DATE_FORMAT)
         wdgt.setSpecialValueText('---')
-        self.formFields['ETA'] = (wdgt, None)
+        self.formFields[modlFld] = (wdgt, None)
         wdgt.signalFldChanged.connect(lambda: self.changeField(self.dtedtETA))
         self.layoutFormMain.addWidget(wdgt, 3, 0)
 
+        modlFld = 'LFD'
         self.dtedtLFD = cQFmFldWidg(QDateEdit,
             lblText='LFD', alignlblText=Qt.AlignmentFlag.AlignTop,
-            modlFld='LFD')
+            modlFld=modlFld)
         wdgt = self.dtedtLFD
         wdgt.setObjectName(u"dtedtLFD")
         wdgt.setDisplayFormat(_DATE_FORMAT)
-        self.formFields['LFD'] = (wdgt, None)
+        self.formFields[modlFld] = (wdgt, None)
         wdgt.signalFldChanged.connect(lambda: self.changeField(self.dtedtLFD))
         self.layoutFormMain.addWidget(wdgt, 3, 1)
 
+        modlFld = 'ChargeableWeight'
         self.lnedtChgWt = cQFmFldWidg(QLineEdit,
             lblText='Chgbl Weight', alignlblText=Qt.AlignmentFlag.AlignTop,
-            modlFld='ChargeableWeight')
+            modlFld=modlFld)
         wdgt = self.lnedtChgWt
         wdgt.setObjectName(u"lnedtChgWt")
-        self.formFields['ChargeableWeight'] = (wdgt, None)
+        self.formFields[modlFld] = (wdgt, None)
         wdgt.signalFldChanged.connect(lambda: self.changeField(self.lnedtChgWt))
         self.layoutFormMain.addWidget(wdgt, 3, 2)
 
+        modlFld = 'Pieces'
         self.lnedtPcs = cQFmFldWidg(QLineEdit,
             lblText='Pieces', alignlblText=Qt.AlignmentFlag.AlignTop,
-            modlFld='Pieces')
+            modlFld=modlFld)
         wdgt = self.lnedtPcs
         wdgt.setObjectName(u"lnedtPcs")
-        self.formFields['Pieces'] = (wdgt, None)
+        self.formFields[modlFld] = (wdgt, None)
         wdgt.signalFldChanged.connect(lambda: self.changeField(self.lnedtPcs))
         self.layoutFormMain.addWidget(wdgt, 3, 3)
 
+        modlFld = 'Volume'
         self.lnedtVolume = cQFmFldWidg(QLineEdit,
             lblText='Volume', alignlblText=Qt.AlignmentFlag.AlignTop,
-            modlFld='Volume')
+            modlFld=modlFld)
         wdgt = self.lnedtVolume
         wdgt.setObjectName(u"lnedtVolume")
-        self.formFields['Volume'] = (wdgt, None)
+        self.formFields[modlFld] = (wdgt, None)
         wdgt.signalFldChanged.connect(lambda: self.changeField(self.lnedtVolume))
         self.layoutFormMain.addWidget(wdgt, 3, 4)
 
-        # self.txtedtNotes = cQFmFldWidg(QTextEdit,   # this should be a QTextEdit, but at the moment its crashing on setText. I gotta figger out why
+        modlFld = 'notes'
         self.txtedtNotes = cQFmFldWidg(QPlainTextEdit,
             lblText='notes', alignlblText=Qt.AlignmentFlag.AlignTop,
-            modlFld='notes')
+            modlFld=modlFld)
         wdgt = self.txtedtNotes
         wdgt.setObjectName(u"txtedtNotes")
-        self.formFields['notes'] = (wdgt, None)
+        self.formFields[modlFld] = (wdgt, None)
         wdgt.signalFldChanged.connect(lambda: self.changeField(self.txtedtNotes))
         self.layoutFormMain.addWidget(wdgt, 5, 1, 3, 4)
 
+        modlFld = 'POList'
         self.listWidgetPO = QListWidget()
         wdgt = self.listWidgetPO
         wdgt.setObjectName(u"listWidgetPO")
-        wdgt.setProperty('field', 'POList')
-        self.formFields['POList'] = (wdgt, None)
+        wdgt.setProperty('field', modlFld)
+        self.formFields[modlFld] = (wdgt, None)
         wdgt.itemClicked.connect(lambda item: pleaseWriteMe(self, 'PO clicks'))
         wdgt.itemDoubleClicked.connect(lambda item: pleaseWriteMe(self, 'PO doubleclicks'))
         self.btnAddPO = QPushButton()
@@ -328,11 +340,12 @@ class HBLForm(QWidget):
         self.layoutFormMain.addWidget(wdgt, 1, 5, 5, 1)
         self.layoutFormMain.addWidget(wdgtadd, 3, 6)
 
+        modlFld = 'ShippingForms'
         self.listWidgetShpFms = QListWidget()
         wdgt = self.listWidgetShpFms
         wdgt.setObjectName(u"listWidgetShpFms")
-        wdgt.setProperty('field', 'ShippingForms')
-        self.formFields['ShippingForms'] = (wdgt, None)
+        wdgt.setProperty('field', modlFld)
+        self.formFields[modlFld] = (wdgt, None)
         wdgt.itemClicked.connect(lambda item: pleaseWriteMe(self, 'ShpFms clicks'))
         wdgt.itemDoubleClicked.connect(lambda item: pleaseWriteMe(self, 'ShpFms doubleclicks'))
         self.btnAddShpFms = QPushButton()
@@ -435,8 +448,6 @@ class HBLForm(QWidget):
         QWidget.setTabOrder(self.listWidgetPO, self.listWidgetShpFms)
         QWidget.setTabOrder(self.listWidgetShpFms, self.tabsetHBLInfo)
         
-        # track if form dirty
-        # self.setFormDirty(self, False)
         # make this a new record
         self.currRec = self.createNewHBLRec()
         self.setFormDirty(self,False)
@@ -444,7 +455,7 @@ class HBLForm(QWidget):
         self.retranslateUi()
 
         #TODO: play weith this and get it to work
-        # self.windowScroller = QScrollArea(self)
+        # self.windowScroller = QScrollArea()
         # self.windowScroller.setWidget(self)
         # self.windowScroller.setWidgetResizable(True)
         
@@ -698,7 +709,7 @@ class HBLForm(QWidget):
             return
         
         # get linked recs
-        # _linkedTables = ['ShippingForms', 'PO', 'Invoices', 'Containers', 'reference_ties']
+        # _linkedTables = ['ShippingForms', 'PO', 'Invoices', 'Containers', 'references']
         self.fillFormFromlinkedShipForms()
         
         self.fillFormFromlinkedPO()
@@ -750,7 +761,7 @@ class HBLForm(QWidget):
         Q3 = Q(Invoice__in=self.linkedRecs['Invoices'].values_list('pk'))
         Q4 = Q(ShippingForm__in=self.linkedRecs['ShippingForms'].values_list('pk'))
         reflist = refs.objects.filter(Q1 | Q2 | Q3 | Q4)
-        self.linkedRecs['reference_ties'] = reflist
+        self.linkedRecs['references'] = reflist
         qmodel = QModelrefs(reflist)
         self.tblViewrefs.setModel(qmodel)
     
@@ -759,7 +770,7 @@ class HBLForm(QWidget):
     ########    Update
 
     @Slot()
-    def changeField(self, wdgt:QWidget) -> bool:
+    def changeField(self, wdgt:cQFmFldWidg) -> bool:
         forgnKeys = {   
             'Company',
             'FreightType',
@@ -767,25 +778,26 @@ class HBLForm(QWidget):
             'Quote',
             }
         cRec = self.currRec
-        dbField = wdgt.property('field')
+        # dbField = wdgt.property('field')
+        dbField = wdgt.modelField()
         
-        wdgt_value = None
+        wdgt_value = wdgt.Value()
         
         #TODO: write cUtil getQWidgetValue(wdgt), setQWidgetValue(wdgt)
         #widgtype = wdgt.staticMetaObject.className()
-        if any([wdgt.inherits(tp) for tp in ['cDataList', ]]):  # I hope I hope I hope
-            wdgt_value = wdgt.selectedItem()['keys'][0]
-        if any([wdgt.inherits(tp) for tp in ['QLineEdit', ]]):
-            wdgt_value = wdgt.text()
-        elif any([wdgt.inherits(tp) for tp in ['QTextEdit', ]]):
-            wdgt_value = wdgt.toPlainText()
-        elif any([wdgt.inherits(tp) for tp in ['QComboBox', ]]):
-            wdgt_value = wdgt.currentData()
-        elif any([wdgt.inherits(tp) for tp in ['QDateEdit', ]]):
-            wdgt_value = wdgt.date().toPython()
-        elif any([wdgt.inherits(tp) for tp in ['QCheckBox', ]]):
-            wdgt_value = wdgt.isChecked()
-        # endif widget type test
+        # if any([wdgt.inherits(tp) for tp in ['cDataList', ]]):  # I hope I hope I hope
+        #     wdgt_value = wdgt.selectedItem()['keys'][0]
+        # if any([wdgt.inherits(tp) for tp in ['QLineEdit', ]]):
+        #     wdgt_value = wdgt.text()
+        # elif any([wdgt.inherits(tp) for tp in ['QTextEdit', ]]):
+        #     wdgt_value = wdgt.toPlainText()
+        # elif any([wdgt.inherits(tp) for tp in ['QComboBox', ]]):
+        #     wdgt_value = wdgt.currentData()
+        # elif any([wdgt.inherits(tp) for tp in ['QDateEdit', ]]):
+        #     wdgt_value = wdgt.date().toPython()
+        # elif any([wdgt.inherits(tp) for tp in ['QCheckBox', ]]):
+        #     wdgt_value = wdgt.isChecked()
+        # # endif widget type test
 
         if dbField in forgnKeys:
             # forgnModel:Model = getattr(cRec,dbField).related_model
@@ -868,6 +880,8 @@ class HBLForm(QWidget):
 ##################################################
 
 class Invoice_singleForm(QWidget):
+    formFields:Dict[str, cQFmFldWidg] = {}
+
     def __init__(self, InvRec:Invoices = None, HBLRec:HBL = None, parent = None):
         super().__init__(parent)
         
@@ -891,128 +905,120 @@ class Invoice_singleForm(QWidget):
         wdgt.setObjectName(u"label_3")
         self.gridLayout.addWidget(wdgt, 0, 0)
 
-        self.lblSmOffForm = QLabel(self)
-        self.lnedtSmOffFm = QLineEdit(self)
-        wdgt = self.lnedtSmOffFm; wdgtlbl = self.lblSmOffForm
-        wdgtlbl.setObjectName(u"label")
+        modlFld='id_SmOffFormNum'
+        self.lnedtSmOffFm = cQFmFldWidg(QLineEdit, modlFld=modlFld , parent=self)
+        wdgt = self.lnedtSmOffFm
         wdgt.setObjectName(u"lineEdit")
-        wdgt.setProperty('field', 'id_SmOffFormNum')
-        wdgt.editingFinished.connect(lambda: self.changeField(self.lnedtSmOffFm))
-        self.gridLayout.addWidget(wdgtlbl, 1, 1)
+        self.formFields[modlFld] = wdgt
+        wdgt.signalFldChanged.connect(lambda: self.changeField(self.lnedtSmOffFm))
         self.gridLayout.addWidget(wdgt, 1, 2)
 
-        self.lblSmOffStat = QLabel(self)
-        self.cmbSmOffStat = IncShipAppchoiceWidgets.chooseSmOffInvStatus(parent=self)
-        wdgt = self.cmbSmOffStat; wdgtlbl = self.lblSmOffStat
-        wdgtlbl.setObjectName(u"label_2")
+        modlFld='SmOffStatus'
+        self.cmbSmOffStat = incship_cQFmFldWidg(IncShipAppchoiceWidgets.chooseSmOffInvStatus,
+            modlFld=modlFld, parent=self)
+        wdgt = self.cmbSmOffStat
         wdgt.setObjectName(u"comboBox")
-        wdgt.setProperty('field', 'SmOffStatus')
-        wdgt.currentIndexChanged.connect(lambda indx: self.changeField(self.cmbSmOffStat))
-        self.gridLayout.addWidget(wdgtlbl, 1, 3)
+        self.formFields[modlFld] = wdgt
+        wdgt.signalFldChanged.connect(lambda indx: self.changeField(self.cmbSmOffStat))
         self.gridLayout.addWidget(wdgt, 1, 4)
 
-        self.lblCompany = QLabel(self)
-        self.cmbCompany = IncShipAppchoiceWidgets.chooseCompany(parent=self)
-        wdgt = self.cmbCompany; wdgtlbl = self.lblCompany
-        wdgtlbl.setObjectName(u"label_4")
+        modlFld='Company'
+        self.cmbCompany = incship_cQFmFldWidg(IncShipAppchoiceWidgets.chooseCompany, 
+            modlFld=modlFld, parent=self)
+        wdgt = self.cmbCompany
         wdgt.setObjectName(u"comboBox_2")
-        wdgt.setProperty('field', 'Company')
-        wdgt.currentIndexChanged.connect(lambda indx: self.changeField(self.cmbCompany))
-        self.gridLayout.addWidget(wdgtlbl, 2, 1)
+        self.formFields[modlFld] = wdgt
+        wdgt.signalFldChanged.connect(lambda indx: self.changeField(self.cmbCompany))
         self.gridLayout.addWidget(wdgt, 2, 2)
 
-        self.lblInvNum = QLabel(self)
-        self.lnedtInvNum = QLineEdit(self)
-        wdgt = self.lnedtInvNum; wdgtlbl = self.lblInvNum
-        wdgtlbl.setObjectName(u"label_5")
+        modlFld='InvoiceNumber'
+        self.lnedtInvNum = cQFmFldWidg(QLineEdit, modlFld=modlFld, parent=self)
+        wdgt = self.lnedtInvNum
         wdgt.setObjectName(u"lineEdit_2")
-        wdgt.setProperty('field', 'InvoiceNumber')
-        wdgt.editingFinished.connect(lambda: self.changeField(self.lnedtInvNum))
-        self.gridLayout.addWidget(wdgtlbl, 2, 3)
+        self.formFields[modlFld] = wdgt
+        wdgt.signalFldChanged.connect(lambda: self.changeField(self.lnedtInvNum))
         self.gridLayout.addWidget(wdgt, 2, 4)
 
-        self.lblInvDt = QLabel(self)
-        self.dtedtInvDt = QDateEdit(self)
-        wdgt = self.dtedtInvDt; wdgtlbl = self.lblInvDt
-        wdgtlbl.setObjectName(u"label_6")
+        modlFld='InvoiceDate'
+        self.dtedtInvDt = cQFmFldWidg(QDateEdit, modlFld=modlFld, parent=self)
+        wdgt = self.dtedtInvDt
         wdgt.setObjectName(u"dateEdit")
         wdgt.setDisplayFormat(_DATE_FORMAT)
-        wdgt.setProperty('field', 'InvoiceDate')
-        wdgt.userDateChanged.connect(lambda indx: self.changeField(self.dtedtInvDt))
-        self.gridLayout.addWidget(wdgtlbl, 2, 5)
+        self.formFields[modlFld] = wdgt
+        wdgt.signalFldChanged.connect(lambda indx: self.changeField(self.dtedtInvDt))
         self.gridLayout.addWidget(wdgt, 2, 6)
 
-        self.lblAmount = QLabel(self)
-        self.lnedtAmount = QLineEdit(self)
-        wdgt = self.lnedtAmount; wdgtlbl = self.lblAmount
-        wdgtlbl.setObjectName(u"label_7")
+        modlFld='InvoiceAmount'
+        self.lnedtAmount = cQFmFldWidg(QLineEdit, modlFld=modlFld, parent=self)
+        wdgt = self.lnedtAmount
         wdgt.setObjectName(u"lineEdit_3")
-        wdgt.setProperty('field', 'InvoiceAmount')
-        wdgt.editingFinished.connect(lambda: self.changeField(self.lnedtAmount))
-        self.gridLayout.addWidget(wdgtlbl, 2, 7)
+        self.formFields[modlFld] = wdgt
+        wdgt.signalFldChanged.connect(lambda: self.changeField(self.lnedtAmount))
         self.gridLayout.addWidget(wdgt, 2, 8)
 
-        self.lblHBL = QLabel(self)
-        self.dlistHBL = IncShipAppchoiceWidgets.chooseHBL(initval=str(InvRec.HBL) if InvRec else '', parent=self)
-        wdgt = self.dlistHBL; wdgtlbl = self.lblHBL
-        wdgtlbl.setObjectName(u"label_8")
+        modlFld = 'HBL'
+        self.dlistHBL = incship_cQFmFldWidg(IncShipAppchoiceWidgets.chooseHBL, 
+            modlFld=modlFld, initval=str(InvRec.HBL) if InvRec else '', 
+            parent=self)
+        wdgt = self.dlistHBL
         wdgt.setObjectName(u"lineEdit_4")
-        wdgt.setProperty('field', 'HBL')
-        wdgt.editingFinished.connect(lambda: self.changeField(self.dlistHBL))
-        self.gridLayout.addWidget(wdgtlbl, 3, 1)
+        self.formFields[modlFld] = wdgt
+        wdgt.signalFldChanged.connect(lambda: self.changeField(self.dlistHBL))
         self.gridLayout.addWidget(wdgt, 3, 2)
 
-        self.lblAddlBillInv = QLabel(self)
-        self.dlistAddlBillInv = IncShipAppchoiceWidgets.chooseInvoice(initval=str(InvRec.AddlBillingForInv) if InvRec else '', parent=self)
-        wdgt = self.dlistAddlBillInv; wdgtlbl = self.lblAddlBillInv
-        wdgtlbl.setObjectName(u"label_10")
+        modlFld='AddlBillingForInv'
+        self.dlistAddlBillInv = incship_cQFmFldWidg(IncShipAppchoiceWidgets.chooseInvoice,
+            modlFld=modlFld, initval=str(InvRec.AddlBillingForInv) if InvRec else '', 
+            parent=self)
+        wdgt = self.dlistAddlBillInv
         wdgt.setObjectName(u"lineEdit_5")
-        wdgt.setProperty('field', 'AddlBillingForInv')
-        wdgt.editingFinished.connect(lambda: self.changeField(self.dlistAddlBillInv))
-        self.gridLayout.addWidget(wdgtlbl, 3, 4)
+        self.formFields[modlFld] = wdgt
+        wdgt.signalFldChanged.connect(lambda: self.changeField(self.dlistAddlBillInv))
         self.gridLayout.addWidget(wdgt, 3, 5, 1, 2)
 
-        self.lblnotes = QLabel(self)
-        self.txtedtnotes = QTextEdit(self)
-        wdgt = self.txtedtnotes; wdgtlbl = self.lblnotes
-        wdgtlbl.setObjectName(u"label_9")
+        modlFld = 'notes'
+        self.txtedtnotes = cQFmFldWidg(QTextEdit, modlFld=modlFld, parent=self)
+        wdgt = self.txtedtnotes
         wdgt.setObjectName(u"textEdit")
-        wdgt.setProperty('field', 'notes')
-        wdgt.textChanged.connect(lambda: self.changeField(self.txtedtnotes))
-        self.gridLayout.addWidget(wdgtlbl, 4, 0)
+        self.formFields[modlFld] = wdgt
+        wdgt.signalFldChanged.connect(lambda: self.changeField(self.txtedtnotes))
         self.gridLayout.addWidget(wdgt, 4, 1, 1, 8)
 
-        self.layoutVerified = QHBoxLayout()
-        self.chkbxVerified = QCheckBox(self)
+        # self.layoutVerified = QHBoxLayout()
+        modlFld='verifiedForFii'
+        self.chkbxVerified = cQFmFldWidg(QCheckBox, lblChkBxYesNo={True:'YES', False:'NO'},
+            modlFld=modlFld, parent=self)
         wdgt = self.chkbxVerified
         wdgt.setObjectName(u"checkBox")
-        wdgt.setProperty('field', 'verifiedForFii')
-        wdgt.checkStateChanged.connect(lambda newstate: self.changeField(self.chkbxVerified))
-        self.lnedtVerified = QLineEdit(self)
-        self.lnedtVerified.setProperty('field', 'verifiedForFii')
-        self.lnedtVerified.setReadOnly(True)
-        self.lnedtVerified.setFrame(False)
-        self.lnedtVerified.setMaximumWidth(40)
-        self.lnedtVerified.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self.layoutVerified.addWidget(self.lnedtVerified)
-        self.layoutVerified.addWidget(wdgt)
-        self.gridLayout.addLayout(self.layoutVerified, 0, 1, 1, 2)
+        self.formFields[modlFld] = wdgt
+        wdgt.signalFldChanged.connect(lambda newstate: self.changeField(self.chkbxVerified))
+        # self.lnedtVerified = QLineEdit(self)
+        # self.lnedtVerified.setProperty('field', '')
+        # self.lnedtVerified.setReadOnly(True)
+        # self.lnedtVerified.setFrame(False)
+        # self.lnedtVerified.setMaximumWidth(40)
+        # self.lnedtVerified.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        # self.layoutVerified.addWidget(self.lnedtVerified)
+        # self.layoutVerified.addWidget(wdgt)
+        self.gridLayout.addWidget(wdgt, 0, 1, 1, 2)
 
-        self.layoutInvDL = QHBoxLayout()
-        self.chkbxInvDL = QCheckBox(self)
+        # self.layoutInvDL = QHBoxLayout()
+        modlFld='inv_downloaded'
+        self.chkbxInvDL = cQFmFldWidg(QCheckBox, lblChkBxYesNo={True:'YES', False:'NO'},
+            modlFld=modlFld, parent=self)
         wdgt = self.chkbxInvDL
         wdgt.setObjectName(u"checkBox_2")
-        wdgt.setProperty('field', 'inv_downloaded')
-        wdgt.checkStateChanged.connect(lambda newstate: self.changeField(self.chkbxInvDL))
-        self.lnedtInvDL = QLineEdit(self)
-        self.lnedtInvDL.setProperty('field', 'inv_downloaded')
-        self.lnedtInvDL.setReadOnly(True)
-        self.lnedtInvDL.setFrame(False)
-        self.lnedtInvDL.setMaximumWidth(40)
-        self.lnedtInvDL.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self.layoutInvDL.addWidget(self.lnedtInvDL)
-        self.layoutInvDL.addWidget(wdgt)
-        self.gridLayout.addLayout(self.layoutInvDL, 0, 4, 1, 2)
+        self.formFields[modlFld] = wdgt
+        wdgt.signalFldChanged.connect(lambda newstate: self.changeField(self.chkbxInvDL))
+        # self.lnedtInvDL = QLineEdit(self)
+        # self.lnedtInvDL.setProperty('field', 'inv_downloaded')
+        # self.lnedtInvDL.setReadOnly(True)
+        # self.lnedtInvDL.setFrame(False)
+        # self.lnedtInvDL.setMaximumWidth(40)
+        # self.lnedtInvDL.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        # self.layoutInvDL.addWidget(self.lnedtInvDL)
+        # self.layoutInvDL.addWidget(wdgt)
+        self.gridLayout.addWidget(wdgt, 0, 4, 1, 2)
         
         self.btnCommit = QPushButton(self)
         wdgt = self.btnCommit
@@ -1024,21 +1030,23 @@ class Invoice_singleForm(QWidget):
         
         self.retranslateUi()
         
+        print(self.formFields)
+        
         self.fillFormFromcurrRec()
     # setupUi
 
     def retranslateUi(self):
-        self.lblSmOffStat.setText(QCoreApplication.translate("Frame", u"SmOff Status", None))
-        self.chkbxVerified.setText(QCoreApplication.translate("Frame", u"verified for fii?", None))
-        self.lblCompany.setText(QCoreApplication.translate("Frame", u"Company", None))
-        self.chkbxInvDL.setText(QCoreApplication.translate("Frame", u"Inv dl?", None))
-        self.lblAmount.setText(QCoreApplication.translate("Frame", u"Inv Amount", None))
-        self.lblInvNum.setText(QCoreApplication.translate("Frame", u"Inv #", None))
-        self.lblnotes.setText(QCoreApplication.translate("Frame", u"notes", None))
-        self.lblAddlBillInv.setText(QCoreApplication.translate("Frame", u"Addl Billing For Invoice", None))
-        self.lblInvDt.setText(QCoreApplication.translate("Frame", u"Inv Date", None))
-        self.lblHBL.setText(QCoreApplication.translate("Frame", u"HBL", None))
-        self.lblSmOffForm.setText(QCoreApplication.translate("Frame", u"SmOff FmNum", None))
+        self.cmbSmOffStat.setLabelText(QCoreApplication.translate("Frame", u"SmOff Status", None))
+        self.chkbxVerified.setLabelText(QCoreApplication.translate("Frame", u"verified for fii?", None))
+        self.cmbCompany.setLabelText(QCoreApplication.translate("Frame", u"Company", None))
+        self.chkbxInvDL.setLabelText(QCoreApplication.translate("Frame", u"Inv dl?", None))
+        self.lnedtAmount.setLabelText(QCoreApplication.translate("Frame", u"Inv Amount", None))
+        self.lnedtInvNum.setLabelText(QCoreApplication.translate("Frame", u"Inv #", None))
+        self.txtedtnotes.setLabelText(QCoreApplication.translate("Frame", u"notes", None))
+        self.dlistAddlBillInv.setLabelText(QCoreApplication.translate("Frame", u"Addl Billing For Invoice", None))
+        self.dtedtInvDt.setLabelText(QCoreApplication.translate("Frame", u"Inv Date", None))
+        self.dlistHBL.setLabelText(QCoreApplication.translate("Frame", u"HBL", None))
+        self.lnedtSmOffFm.setLabelText(QCoreApplication.translate("Frame", u"SmOff FmNum", None))
         self.btnCommit.setText(QCoreApplication.translate('Form','Save Changes',None))
     # retranslateUi
 
@@ -1056,7 +1064,7 @@ class Invoice_singleForm(QWidget):
         if InvNumber: newRec.InvoiceNumber = InvNumber
         if HBLref: 
             if isinstance(HBLref, str|int):
-                newRec.HBL = HBL.objects.get_or_create(
+                newRec.HBL, _ = HBL.objects.get_or_create(
                     HBLNumber=str(HBLref), 
                     defaults={
                         'incoterm': '',
@@ -1098,46 +1106,53 @@ class Invoice_singleForm(QWidget):
                 lambda value: str(value) if value else '',
                 lambda value: value,
             ),
+            'id_SmOffFormNum': (
+                lambda value: str(value), 
+                lambda value: value,
+            ),
         }
         for field in cRec._meta.get_fields():
             field_value = getattr(cRec, field.name, None)
-            field_valueStr = str(field_value)
+            field_valueStr = field_value
             if field.name in forgnKeys:
                 field_valueStr = str(forgnKeys[field.name])
             if field.name in valu_transform_flds:
                 field_valueStr = valu_transform_flds[field.name][0](field_value)
             
-            for wdgt in self.findChildren(QWidget):
-                if wdgt.property('field') == field.name:
-                    # set wdgt value to field_value
-                    # must set value per widget type
-                    if any([wdgt.inherits(tp) for tp in ['QLineEdit', ]]):
-                        wdgt.setText(field_valueStr)
-                    elif any([wdgt.inherits(tp) for tp in ['QTextEdit', ]]):
-                        wdgt.setPlainText(field_valueStr)
-                    elif any([wdgt.inherits(tp) for tp in ['QComboBox', ]]):
-                        chNum = wdgt.findData(field_valueStr)
-                        if chNum == -1: 
-                            wdgt.setCurrentText(field_valueStr)
-                        else:
-                            wdgt.setCurrentIndex(chNum)
-                        #endif findData valid
-                    elif any([wdgt.inherits(tp) for tp in ['QDateEdit', ]]):
-                        wdgt.setDate(field_value)
-                    elif any([wdgt.inherits(tp) for tp in ['QCheckBox', ]]):
-                        wdgt.setChecked(field_value if isinstance(field_value,bool) else False)
-                    # endif widget type test
+            if field.name in self.formFields:
+                wdgt = self.formFields[field.name]
+                wdgt.setValue(field_valueStr)
+            # for wdgt in self.findChildren(QWidget):
+            #     if wdgt.property('field') == field.name:
+            #         # set wdgt value to field_value
+            #         # must set value per widget type
+            #         if any([wdgt.inherits(tp) for tp in ['QLineEdit', ]]):
+            #             wdgt.setText(field_valueStr)
+            #         elif any([wdgt.inherits(tp) for tp in ['QTextEdit', ]]):
+            #             wdgt.setPlainText(field_valueStr)
+            #         elif any([wdgt.inherits(tp) for tp in ['QComboBox', ]]):
+            #             chNum = wdgt.findData(field_valueStr)
+            #             if chNum == -1: 
+            #                 wdgt.setCurrentText(field_valueStr)
+            #             else:
+            #                 wdgt.setCurrentIndex(chNum)
+            #             #endif findData valid
+            #         elif any([wdgt.inherits(tp) for tp in ['QDateEdit', ]]):
+            #             wdgt.setDate(field_value)
+            #         elif any([wdgt.inherits(tp) for tp in ['QCheckBox', ]]):
+            #             wdgt.setChecked(field_value if isinstance(field_value,bool) else False)
+            #         # endif widget type test
 
-                    break   # we found the widget for this field; we don't need to keep testing widgets
-                # endif widget field = field.name
-            # endfor wdgt in self.children()
+            #         break   # we found the widget for this field; we don't need to keep testing widgets
+            #     # endif widget field = field.name
+            # # endfor wdgt in self.children()
         #endfor field in cRec
         
-        # exception to the rule; the two chekbox YES/No exposewrs
-        wdgt = self.lnedtVerified
-        wdgt.setText('YES' if getattr(cRec, wdgt.property('field'), False) else 'NO') 
-        wdgt = self.lnedtInvDL
-        wdgt.setText('YES' if getattr(cRec, wdgt.property('field'), False) else 'NO') 
+        # # exception to the rule; the two chekbox YES/No exposewrs
+        # wdgt = self.lnedtVerified
+        # wdgt.setText('YES' if getattr(cRec, wdgt.property('field'), False) else 'NO') 
+        # wdgt = self.lnedtInvDL
+        # wdgt.setText('YES' if getattr(cRec, wdgt.property('field'), False) else 'NO') 
         
         self.setFormDirty(self, False)
     # fillFormFromRec
@@ -1147,11 +1162,7 @@ class Invoice_singleForm(QWidget):
     ########    Update
 
     @Slot()
-    def changeField(self, wdgt:QWidget) -> bool:
-        iWannaDebug = False
-        if iWannaDebug and (wdgt == self.chkbxInvDL or wdgt == self.chkbxVerified):
-            breakpoint()
-            
+    def changeField(self, wdgt:cQFmFldWidg) -> bool:
         # move to class var?
         forgnKeys = {   
             'Company',
@@ -1174,26 +1185,26 @@ class Invoice_singleForm(QWidget):
             ),
         }
         cRec:Invoices = self.currRec
-        dbField = wdgt.property('field')
+        dbField = wdgt.modelField()
 
-        wdgt_value = None
+        wdgt_value = wdgt.Value()
 
-        #TODO: write cUtil getQWidgetValue(wdgt), setQWidgetValue(wdgt)
-        #widgtype = wdgt.staticMetaObject.className()
-        if any([wdgt.inherits(tp) for tp in ['cDataList', ]]):  # I hope I hope I hope
-            kees = wdgt.selectedItem()['keys']
-            wdgt_value = kees[0] if kees else wdgt.text()
-        elif any([wdgt.inherits(tp) for tp in ['QLineEdit', ]]):
-            wdgt_value = wdgt.text()
-        elif any([wdgt.inherits(tp) for tp in ['QTextEdit', ]]):
-            wdgt_value = wdgt.toPlainText()
-        elif any([wdgt.inherits(tp) for tp in ['QComboBox', ]]):
-            wdgt_value = wdgt.currentData()
-        elif any([wdgt.inherits(tp) for tp in ['QDateEdit', ]]):
-            wdgt_value = wdgt.date().toPython()
-        elif any([wdgt.inherits(tp) for tp in ['QCheckBox', ]]):
-            wdgt_value = wdgt.isChecked()
-        # endif widget type test
+        # #TODO: write cUtil getQWidgetValue(wdgt), setQWidgetValue(wdgt)
+        # #widgtype = wdgt.staticMetaObject.className()
+        # if any([wdgt.inherits(tp) for tp in ['cDataList', ]]):  # I hope I hope I hope
+        #     kees = wdgt.selectedItem()['keys']
+        #     wdgt_value = kees[0] if kees else wdgt.text()
+        # elif any([wdgt.inherits(tp) for tp in ['QLineEdit', ]]):
+        #     wdgt_value = wdgt.text()
+        # elif any([wdgt.inherits(tp) for tp in ['QTextEdit', ]]):
+        #     wdgt_value = wdgt.toPlainText()
+        # elif any([wdgt.inherits(tp) for tp in ['QComboBox', ]]):
+        #     wdgt_value = wdgt.currentData()
+        # elif any([wdgt.inherits(tp) for tp in ['QDateEdit', ]]):
+        #     wdgt_value = wdgt.date().toPython()
+        # elif any([wdgt.inherits(tp) for tp in ['QCheckBox', ]]):
+        #     wdgt_value = wdgt.isChecked()
+        # # endif widget type test
 
         if dbField in forgnKeys:
             dbField += '_id'
@@ -1236,13 +1247,13 @@ class Invoice_singleForm(QWidget):
             setattr(cRec, dbField, wdgt_value)
             self.setFormDirty(wdgt, True)
 
-            # exception to the rule; the two chekbox YES/No exposewrs
-            specialwdgt = self.lnedtVerified
-            if dbField == specialwdgt.property('field'):
-                specialwdgt.setText('YES' if getattr(cRec, specialwdgt.property('field'), False) else 'NO') 
-            specialwdgt = self.lnedtInvDL
-            if dbField == specialwdgt.property('field'):
-                specialwdgt.setText('YES' if getattr(cRec, specialwdgt.property('field'), False) else 'NO') 
+            # # exception to the rule; the two chekbox YES/No exposewrs
+            # specialwdgt = self.lnedtVerified
+            # if dbField == specialwdgt.property('field'):
+            #     specialwdgt.setText('YES' if getattr(cRec, specialwdgt.property('field'), False) else 'NO') 
+            # specialwdgt = self.lnedtInvDL
+            # if dbField == specialwdgt.property('field'):
+            #     specialwdgt.setText('YES' if getattr(cRec, specialwdgt.property('field'), False) else 'NO') 
         
             return True
         else:
