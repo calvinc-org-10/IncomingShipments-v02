@@ -1122,7 +1122,6 @@ class Invoice_singleForm(QWidget):
             if field.name in self.formFields:
                 wdgt = self.formFields[field.name]
                 wdgt.setValue(field_valueStr)
-    #RESTART HERE
             # for wdgt in self.findChildren(QWidget):
             #     if wdgt.property('field') == field.name:
             #         # set wdgt value to field_value
@@ -1402,35 +1401,35 @@ class refsForm(QWidget):
         
         self.lblRecID = QLabel()
         self.lblRecID.setProperty('field', 'id')
-        self.formFields['id'] = (self.lblRecID, None)
+        # self.formFields['id'] = (self.lblRecID, None)
         refid_codeblock = True      # I do this to emphasize a logical codeblock unit
         if refid_codeblock:
             self.lyout_refidBlock = QHBoxLayout()
             refdict = {rec.pk: rec.refName for rec in refs.objects.all()}
-            self.dlistrefid = cDataList(refdict)
-            self.dlistrefid.setProperty('field', 'refName')
-            self.formFields['refName'] = (self.dlistrefid, None)
-            self.dlistrefid.editingFinished.connect(self.getRecordFromGoto)
+            modlField = 'refName'
+            self.dlistrefid = cQFmFldWidg(cDataList, modlFld=modlField, choices=refdict)
+            self.formFields[modlField] = (self.dlistrefid, None)
+            self.dlistrefid.signalFldChanged.connect(self.getRecordFromGoto)
             self.lblrefidExpln = QLabel(self)
             self.lblrefidExpln.setText(self.tr('(if the ref id you enter doesn\'t exist, it will be created)'))
-            self.lblrefidExpln.setWordWrap(True)
+            self.lblrefidExpln.setWordWrap(False)
             self.lyout_refidBlock.addWidget(self.dlistrefid)
             self.lyout_refidBlock.addWidget(self.lblrefidExpln)
         FilePath_codeblock = True      # I do this to emphasize a logical codeblock unit
         if FilePath_codeblock:
+            modlField = 'FilePath'
             self.lyout_FilePathBlock = QHBoxLayout()
-            self.lnedtFilePath = QLineEdit(self)
-            self.lnedtFilePath.setProperty('field', 'FilePath')
-            self.formFields['FilePath'] = (self.lnedtFilePath, None)
-            self.lnedtFilePath.editingFinished.connect(lambda: self.changeField(self.lnedtFilePath))
+            self.lnedtFilePath = cQFmFldWidg(QLineEdit, modlFld=modlField, parent=self)
+            self.formFields[modlField] = (self.lnedtFilePath, None)
+            self.lnedtFilePath.signalFldChanged.connect(lambda: self.changeField(self.lnedtFilePath))
             self.btnChooseFilePaths = QPushButton(self.tr('Choose Files'),self)
             self.btnChooseFilePaths.clicked.connect(lambda: self.ChooseFiles())
             self.lyout_FilePathBlock.addWidget(self.lnedtFilePath)
             self.lyout_FilePathBlock.addWidget(self.btnChooseFilePaths)
-        self.txtedtNotes = QTextEdit(); 
-        self.txtedtNotes.setProperty('field', 'notes')
-        self.formFields['notes'] = (self.txtedtNotes, None)
-        self.txtedtNotes.textChanged.connect(lambda: self.changeField(self.txtedtNotes))
+        modlField = 'notes'
+        self.txtedtNotes = cQFmFldWidg(QTextEdit, modlFld=modlField) 
+        self.formFields[modlField] = (self.txtedtNotes, None)
+        self.txtedtNotes.signalFldChanged.connect(lambda: self.changeField(self.txtedtNotes))
 
         self.layoutFormMainTopLeft.addRow('reference id', self.lyout_refidBlock)
         self.layoutFormMainTopLeft.addRow('File Refs', self.lyout_FilePathBlock)
@@ -1458,72 +1457,67 @@ class refsForm(QWidget):
         #
         self.wdgtDetail = [[None for row in (rowLabel, rowData)] for col in (columnHBL, columnContainers, columnShipForms, columnInvoices)]
         #
-        self.wdgtDetail[columnHBL][rowLabel] = QLabel('HBL', self)
-        self.wdgtDetail[columnHBL][rowLabel].setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.wdgtDetail[columnContainers][rowLabel] = QLabel(self.tr('Container'), self)
-        self.wdgtDetail[columnContainers][rowLabel].setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.wdgtDetail[columnShipForms][rowLabel] = QLabel(self.tr('Shipping Form'), self)
-        self.wdgtDetail[columnShipForms][rowLabel].setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.wdgtDetail[columnInvoices][rowLabel] = QLabel(self.tr('Invoice'), self)
-        self.wdgtDetail[columnInvoices][rowLabel].setAlignment(Qt.AlignmentFlag.AlignCenter)
+        modlField = 'HBL'
+        self.wdgtDetail[columnHBL][rowData] = incship_cQFmFldWidg(IncShipAppchoiceWidgets.chooseHBL,
+            lblText='HBL', alignlblText=Qt.AlignmentFlag.AlignTop|Qt.AlignmentFlag.AlignHCenter,
+            modlFld=modlField, parent=self)
+        self.formFields[modlField] = (self.wdgtDetail[columnHBL][rowData], None)
+        self.wdgtDetail[columnHBL][rowData].signalFldChanged.connect(lambda: self.changeField(self.wdgtDetail[columnHBL][rowData]))
+
+        modlField = 'Container'
+        self.wdgtDetail[columnContainers][rowData] = incship_cQFmFldWidg(IncShipAppchoiceWidgets.chooseContainer,
+            lblText=self.tr('Container'), alignlblText=Qt.AlignmentFlag.AlignTop|Qt.AlignmentFlag.AlignHCenter,
+            modlFld=modlField, parent=self)
+        self.formFields[modlField] = (self.wdgtDetail[columnContainers][rowData], None)
+        self.wdgtDetail[columnContainers][rowData].signalFldChanged.connect(lambda: self.changeField(self.wdgtDetail[columnContainers][rowData]))
+
+        modlField = 'ShippingForm'
+        self.wdgtDetail[columnShipForms][rowData] = incship_cQFmFldWidg(IncShipAppchoiceWidgets.chooseShipForm, 
+            lblText=self.tr('Shipping Form'), alignlblText=Qt.AlignmentFlag.AlignTop|Qt.AlignmentFlag.AlignHCenter,
+            modlFld=modlField, parent=self)
+        self.formFields[modlField] = (self.wdgtDetail[columnShipForms][rowData], None)
+        self.wdgtDetail[columnShipForms][rowData].signalFldChanged.connect(lambda: self.changeField(self.wdgtDetail[columnShipForms][rowData]))
+
+        modlField = 'Invoice'
+        self.wdgtDetail[columnInvoices][rowData] = incship_cQFmFldWidg(IncShipAppchoiceWidgets.chooseInvoice,
+            lblText=self.tr('Invoice'), alignlblText=Qt.AlignmentFlag.AlignTop|Qt.AlignmentFlag.AlignHCenter,
+            modlFld=modlField, parent=self)
+        self.formFields[modlField] = (self.wdgtDetail[columnInvoices][rowData], None)
+        self.wdgtDetail[columnInvoices][rowData].signalFldChanged.connect(lambda: self.changeField(self.wdgtDetail[columnInvoices][rowData]))
+
         #
-        self.wdgtDetail[columnHBL][rowData] = IncShipAppchoiceWidgets.chooseHBL(parent=self)
-        self.wdgtDetail[columnHBL][rowData].setProperty('field', 'HBL')
-        self.formFields['HBL'] = (self.wdgtDetail[columnHBL][rowData], None)
-        self.wdgtDetail[columnHBL][rowData].editingFinished.connect(lambda: self.changeField(self.wdgtDetail[columnHBL][rowData]))
-        self.wdgtDetail[columnInvoices][rowData] = IncShipAppchoiceWidgets.chooseInvoice(parent=self)
-        self.wdgtDetail[columnInvoices][rowData].setProperty('field', 'Invoice')
-        self.formFields['Invoice'] = (self.wdgtDetail[columnInvoices][rowData], None)
-        self.wdgtDetail[columnInvoices][rowData].editingFinished.connect(lambda: self.changeField(self.wdgtDetail[columnInvoices][rowData]))
-        self.wdgtDetail[columnContainers][rowData] = IncShipAppchoiceWidgets.chooseContainer(parent=self)
-        self.wdgtDetail[columnContainers][rowData].setProperty('field', 'Container')
-        self.formFields['Container'] = (self.wdgtDetail[columnContainers][rowData], None)
-        self.wdgtDetail[columnContainers][rowData].editingFinished.connect(lambda: self.changeField(self.wdgtDetail[columnContainers][rowData]))
-        self.wdgtDetail[columnShipForms][rowData] = IncShipAppchoiceWidgets.chooseShipForm(parent=self)
-        self.wdgtDetail[columnShipForms][rowData].setProperty('field', 'ShippingForm')
-        self.formFields['ShippingForm'] = (self.wdgtDetail[columnShipForms][rowData], None)
-        self.wdgtDetail[columnShipForms][rowData].editingFinished.connect(lambda: self.changeField(self.wdgtDetail[columnShipForms][rowData]))
         # TODO: HOT! connect procs for new entries
         # TODO: HOT! set for dirty on change
 
-        for row in (rowLabel, rowData):
-            for col in (columnHBL, columnContainers, columnShipForms, columnInvoices):
+        for row in [rowData,]:
+            for col in [columnHBL, columnContainers, columnShipForms, columnInvoices]:
                 self.layoutFormMainDetail.addWidget(self.wdgtDetail[col][row],row,col)
         
         newDetailrow = self.layoutFormMainDetail.rowCount()
         Company_codeblock = True      # I do this to emphasize a logical codeblock unit
         if Company_codeblock:
-            self.layoutBlockCompany = QHBoxLayout()
-            self.lblCompany = QLabel()
-            self.comboCompany = IncShipAppchoiceWidgets.chooseCompany()
-            self.comboCompany.setProperty('field', 'Company')
-            self.formFields['Company'] = (self.comboCompany, 'HBL')
-            self.comboCompany.activated.connect(lambda: self.changeField(self.comboCompany))
-            self.layoutBlockCompany.addWidget(self.lblCompany)
-            self.layoutBlockCompany.addWidget(self.comboCompany)
+            modlField = 'Company'
+            self.comboCompany = incship_cQFmFldWidg(IncShipAppchoiceWidgets.chooseCompany,
+                modlFld=modlField, parent=self)
+            self.formFields[modlField] = (self.comboCompany, 'HBL')
+            self.comboCompany.signalFldChanged.connect(lambda: self.changeField(self.comboCompany))
         Mode_codeblock = True      # I do this to emphasize a logical codeblock unit
         if Mode_codeblock:
-            self.layoutBlockMode = QHBoxLayout()
-            self.lblMode = QLabel()
-            self.comboMode = IncShipAppchoiceWidgets.chooseFreightType()
-            self.comboMode.setProperty('field', 'FreightType')
-            self.formFields['FreightType'] = (self.comboMode, 'HBL')
-            self.comboMode.activated.connect(lambda: self.changeField(self.comboMode))
-            self.layoutBlockMode.addWidget(self.lblMode)
-            self.layoutBlockMode.addWidget(self.comboMode)
+            modlField = 'FreightType'
+            self.comboMode = incship_cQFmFldWidg(IncShipAppchoiceWidgets.chooseFreightType,
+                modlFld=modlField, parent=self)
+            self.formFields[modlField] = (self.comboMode, 'HBL')
+            self.comboMode.signalFldChanged.connect(lambda: self.changeField(self.comboMode))
         Origin_codeblock = True      # I do this to emphasize a logical codeblock unit
         if Origin_codeblock:
-            self.layoutBlockOrigin = QHBoxLayout()
-            self.lblOrigin = QLabel()
-            self.comboOrigin = IncShipAppchoiceWidgets.chooseOrigin()
-            self.comboOrigin.setProperty('field', 'Origin')
-            self.formFields['Origin'] = (self.comboOrigin, 'HBL')
-            self.comboOrigin.activated.connect(lambda: self.changeField(self.comboOrigin))
-            self.layoutBlockOrigin.addWidget(self.lblOrigin)
-            self.layoutBlockOrigin.addWidget(self.comboOrigin)
-        self.layoutFormMainDetail.addLayout(self.layoutBlockCompany,newDetailrow,0)
-        self.layoutFormMainDetail.addLayout(self.layoutBlockMode,newDetailrow,1)
-        self.layoutFormMainDetail.addLayout(self.layoutBlockOrigin,newDetailrow,2)
+            modlField = 'Origin'
+            self.comboOrigin = incship_cQFmFldWidg(IncShipAppchoiceWidgets.chooseOrigin,
+                modlFld=modlField, parent=self)
+            self.formFields[modlField] = (self.comboOrigin, 'HBL')
+            self.comboOrigin.signalFldChanged.connect(lambda: self.changeField(self.comboOrigin))
+        self.layoutFormMainDetail.addWidget(self.comboCompany,newDetailrow,0)
+        self.layoutFormMainDetail.addWidget(self.comboMode,newDetailrow,1)
+        self.layoutFormMainDetail.addWidget(self.comboOrigin,newDetailrow,2)
         
         newDetailrow += 1
         self.lblDateHdr = QLabel()
@@ -1537,48 +1531,32 @@ class refsForm(QWidget):
         
         PickupDt_codeblock = True      # I do this to emphasize a logical codeblock unit
         if PickupDt_codeblock:
-            self.layoutBlockPickupDt = QHBoxLayout()
-            self.lblPickupDt = QLabel()
-            self.dtedPickupDt = QDateEdit()
-            self.dtedPickupDt.setProperty('field', 'PickupDt')
-            self.formFields['PickupDt'] = (self.dtedPickupDt, 'HBL')
-            self.dtedPickupDt.userDateChanged.connect(lambda dt: self.changeField(self.dtedPickupDt))
-            self.layoutBlockPickupDt.addWidget(self.lblPickupDt)
-            self.layoutBlockPickupDt.addWidget(self.dtedPickupDt)
+            modlField = 'PickupDt'
+            self.dtedPickupDt = cQFmFldWidg(QDateEdit, modlFld=modlField, parent=self)
+            self.formFields[modlField] = (self.dtedPickupDt, 'HBL')
+            self.dtedPickupDt.signalFldChanged.connect(lambda dt: self.changeField(self.dtedPickupDt))
         ETA_codeblock = True      # I do this to emphasize a logical codeblock unit
         if ETA_codeblock:
-            self.layoutBlockETA = QHBoxLayout()
-            self.lblETA = QLabel()
-            self.dtedETA = QDateEdit()
-            self.dtedETA.setProperty('field', 'ETA')
-            self.formFields['ETA'] = (self.dtedETA, 'HBL')
-            self.dtedETA.userDateChanged.connect(lambda dt: self.changeField(self.dtedETA))
-            self.layoutBlockETA.addWidget(self.lblETA)
-            self.layoutBlockETA.addWidget(self.dtedETA)
+            modlField = 'ETA'
+            self.dtedETA = cQFmFldWidg(QDateEdit, modlFld=modlField, parent=self)
+            self.formFields[modlField] = (self.dtedETA, 'HBL')
+            self.dtedETA.signalFldChanged.connect(lambda dt: self.changeField(self.dtedETA))
         DelivAppt_codeblock = True      # I do this to emphasize a logical codeblock unit
         if DelivAppt_codeblock:
-            self.layoutBlockDelivAppt = QHBoxLayout()
-            self.lblDelivAppt = QLabel()
-            self.dtedDelivAppt = QDateEdit()
-            self.dtedDelivAppt.setProperty('field', 'DelivAppt')
-            self.formFields['DelivAppt'] = (self.dtedDelivAppt, 'Container')
-            self.dtedDelivAppt.userDateChanged.connect(lambda dt: self.changeField(self.dtedDelivAppt))
-            self.layoutBlockDelivAppt.addWidget(self.lblDelivAppt)
-            self.layoutBlockDelivAppt.addWidget(self.dtedDelivAppt)
+            modlField = 'DelivAppt'
+            self.dtedDelivAppt = cQFmFldWidg(QDateEdit, modlFld=modlField, parent=self)
+            self.formFields[modlField] = (self.dtedDelivAppt, 'Container')
+            self.dtedDelivAppt.signalFldChanged.connect(lambda dt: self.changeField(self.dtedDelivAppt))
         LFD_codeblock = True      # I do this to emphasize a logical codeblock unit
         if LFD_codeblock:
-            self.layoutBlockLFD = QHBoxLayout()
-            self.lblLFD = QLabel()
-            self.dtedLFD = QDateEdit()
-            self.dtedLFD.setProperty('field', 'LFD')
-            self.formFields['LFD'] = (self.dtedLFD, 'Container')
-            self.dtedLFD.userDateChanged.connect(lambda dt: self.changeField(self.dtedLFD))
-            self.layoutBlockLFD.addWidget(self.lblLFD)
-            self.layoutBlockLFD.addWidget(self.dtedLFD)
-        self.layoutFormMainDetail.addLayout(self.layoutBlockPickupDt,newDetailrow,0)
-        self.layoutFormMainDetail.addLayout(self.layoutBlockETA,newDetailrow,1)
-        self.layoutFormMainDetail.addLayout(self.layoutBlockDelivAppt,newDetailrow,2)
-        self.layoutFormMainDetail.addLayout(self.layoutBlockLFD,newDetailrow,3)
+            modlField = 'LFD'
+            self.dtedLFD = cQFmFldWidg(QDateEdit, modlFld=modlField, parent=self)
+            self.formFields[modlField] = (self.dtedLFD, 'Container')
+            self.dtedLFD.signalFldChanged.connect(lambda dt: self.changeField(self.dtedLFD))
+        self.layoutFormMainDetail.addWidget(self.dtedPickupDt,newDetailrow,0)
+        self.layoutFormMainDetail.addWidget(self.dtedETA,newDetailrow,1)
+        self.layoutFormMainDetail.addWidget(self.dtedDelivAppt,newDetailrow,2)
+        self.layoutFormMainDetail.addWidget(self.dtedLFD,newDetailrow,3)
         
         self.layoutForm.addLayout(self.layoutFormMainDetail)
 
@@ -1619,14 +1597,14 @@ class refsForm(QWidget):
 
         self.btnCommit.setText(self.tr('Commit\nChanges',None))
         
-        self.lblCompany.setText(self.tr("Company:"))
-        self.lblMode.setText(self.tr("Frt Type:"))
-        self.lblOrigin.setText(self.tr("Origin:"))
+        self.comboCompany.setLabelText(self.tr("Company:"))
+        self.comboMode.setLabelText(self.tr("Frt Type:"))
+        self.comboOrigin.setLabelText(self.tr("Origin:"))
         self.lblDateHdr.setText(self.tr("Dates"))
-        self.lblPickupDt.setText(self.tr("Pickup:"))
-        self.lblETA.setText(self.tr("ETA:"))
-        self.lblDelivAppt.setText(self.tr("Deliv Appt:"))
-        self.lblLFD.setText(self.tr("LFD:"))
+        self.dtedPickupDt.setLabelText(self.tr("Pickup:"))
+        self.dtedETA.setLabelText(self.tr("ETA:"))
+        self.dtedDelivAppt.setLabelText(self.tr("Deliv Appt:"))
+        self.dtedLFD.setLabelText(self.tr("LFD:"))
    # retranslateUi
 
 
@@ -1640,7 +1618,7 @@ class refsForm(QWidget):
         #TODO: check if dirty
         wdgtGoTo = self.dlistrefid
 
-        slctd = wdgtGoTo.selectedItem()
+        slctd = wdgtGoTo.Value()
         refEnterd = slctd['text']
         # id = wdgt.currentData()
         id = slctd['keys'][0] if len(slctd['keys']) else None
@@ -1717,6 +1695,7 @@ class refsForm(QWidget):
         # set pk display
         self.lblRecID.setText(str(cRec.pk))
 
+        wdgt:cQFmFldWidg = None     # this is just to establish var type
         for field, info in self.formFields.items():
             wdgt, linkFrom = info
             field_value = getattr(cRec, field, None)
@@ -1739,24 +1718,25 @@ class refsForm(QWidget):
             if field in forgnKeys:
                 field_valueStr = str(forgnKeys[field]) if forgnKeys[field] is not None else ''
             if field in ['PickupDt', 'ETA', 'DelivAppt', 'LFD']:
-                field_value = getattr(getattr(cRec, linkFrom, None), field, None)
+                field_valueStr = getattr(getattr(cRec, linkFrom, None), field, None)
             
-            # set wdgt value to field_value
-            # must set value per widget type
-            if any([wdgt.inherits(tp) for tp in ['QLineEdit', ]]):
-                wdgt.setText(field_valueStr)
-            elif any([wdgt.inherits(tp) for tp in ['QTextEdit', ]]):
-                wdgt.setPlainText(field_valueStr)
-            elif any([wdgt.inherits(tp) for tp in ['QComboBox', ]]):
-                chNum = wdgt.findData(field_valueStr)
-                if chNum == -1: 
-                    wdgt.setCurrentText(field_valueStr)
-                else:
-                    wdgt.setCurrentIndex(chNum)
-                #endif findData valid
-            elif any([wdgt.inherits(tp) for tp in ['QDateEdit', ]]):
-                wdgt.setDate(field_value)
-            # endif widget type test
+            wdgt.setValue(field_valueStr)
+            # # set wdgt value to field_value
+            # # must set value per widget type
+            # if any([wdgt.inherits(tp) for tp in ['QLineEdit', ]]):
+            #     wdgt.setText(field_valueStr)
+            # elif any([wdgt.inherits(tp) for tp in ['QTextEdit', ]]):
+            #     wdgt.setPlainText(field_valueStr)
+            # elif any([wdgt.inherits(tp) for tp in ['QComboBox', ]]):
+            #     chNum = wdgt.findData(field_valueStr)
+            #     if chNum == -1: 
+            #         wdgt.setCurrentText(field_valueStr)
+            #     else:
+            #         wdgt.setCurrentIndex(chNum)
+            #     #endif findData valid
+            # elif any([wdgt.inherits(tp) for tp in ['QDateEdit', ]]):
+            #     wdgt.setDate(field_value)
+            # # endif widget type test
 
         #endfor field in cRec
         
@@ -1769,9 +1749,9 @@ class refsForm(QWidget):
     ########    Update
 
     @Slot()
-    def changeField(self, wdgt:QWidget) -> bool:
+    def changeField(self, wdgt:cQFmFldWidg) -> bool:
         cRec = self.currRec
-        dbField = wdgt.property('field')
+        dbField = wdgt.modelField()
         
         forgnKeys = [
             'HBL', 
@@ -1789,30 +1769,29 @@ class refsForm(QWidget):
             'DelivAppt': specFldInfo('Container', cRec.Container, 'DelivAppt'), 
             'LFD': specFldInfo('Container or HBL', cRec.Container if cRec.Container else cRec.HBL, 'LFD'),
             }
-        wdgt_value = None
+        wdgt_value = wdgt.Value()
         
-        #TODO: write cUtil getQWidgetValue(wdgt), setQWidgetValue(wdgt)
-        #widgtype = wdgt.staticMetaObject.className()
-        if any([wdgt.inherits(tp) for tp in ['cDataList', ]]):  
-            wdgt_value = wdgt.selectedItem()['keys'][0] if wdgt.selectedItem()['keys'] else None
-        elif any([wdgt.inherits(tp) for tp in ['QLineEdit', ]]):
-            wdgt_value = wdgt.text()
-        elif any([wdgt.inherits(tp) for tp in ['QTextEdit', ]]):
-            wdgt_value = wdgt.toPlainText()
-        elif any([wdgt.inherits(tp) for tp in ['QComboBox', ]]):
-            wdgt_value = wdgt.currentData()
-        elif any([wdgt.inherits(tp) for tp in ['QDateEdit', ]]):
-            wdgt_value = wdgt.date().toPython()
-        elif any([wdgt.inherits(tp) for tp in ['QCheckBox', ]]):
-            wdgt_value = wdgt.isChecked()
-        # endif widget type test
+        # #TODO: write cUtil getQWidgetValue(wdgt), setQWidgetValue(wdgt)
+        # #widgtype = wdgt.staticMetaObject.className()
+        # if any([wdgt.inherits(tp) for tp in ['cDataList', ]]):  
+        #     wdgt_value = wdgt.selectedItem()['keys'][0] if wdgt.selectedItem()['keys'] else None
+        # elif any([wdgt.inherits(tp) for tp in ['QLineEdit', ]]):
+        #     wdgt_value = wdgt.text()
+        # elif any([wdgt.inherits(tp) for tp in ['QTextEdit', ]]):
+        #     wdgt_value = wdgt.toPlainText()
+        # elif any([wdgt.inherits(tp) for tp in ['QComboBox', ]]):
+        #     wdgt_value = wdgt.currentData()
+        # elif any([wdgt.inherits(tp) for tp in ['QDateEdit', ]]):
+        #     wdgt_value = wdgt.date().toPython()
+        # elif any([wdgt.inherits(tp) for tp in ['QCheckBox', ]]):
+        #     wdgt_value = wdgt.isChecked()
+        # # endif widget type test
 
         if dbField in forgnKeys:
             dbField += '_id'
         
         if wdgt_value or isinstance(wdgt_value,bool):
             if dbField in specialProcFlds:
-                if dbField == 'Origin': breakpoint()
                 specFld = specialProcFlds[dbField]
                 if not specFld.wrttoObj:
                     print(f'{specFld.parentFld} must be provided before setting {dbField}\nMAKE ME A MsgBox!!!')
