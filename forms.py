@@ -1498,6 +1498,7 @@ class refsForm(QWidget):
         if Company_codeblock:
             modlField = 'Company'
             self.comboCompany = incship_cQFmFldWidg(IncShipAppchoiceWidgets.chooseCompany,
+                lblText='_',
                 modlFld=modlField, parent=self)
             self.formFields[modlField] = (self.comboCompany, 'HBL')
             self.comboCompany.signalFldChanged.connect(lambda: self.changeField(self.comboCompany))
@@ -1505,6 +1506,7 @@ class refsForm(QWidget):
         if Mode_codeblock:
             modlField = 'FreightType'
             self.comboMode = incship_cQFmFldWidg(IncShipAppchoiceWidgets.chooseFreightType,
+                lblText='_',
                 modlFld=modlField, parent=self)
             self.formFields[modlField] = (self.comboMode, 'HBL')
             self.comboMode.signalFldChanged.connect(lambda: self.changeField(self.comboMode))
@@ -1512,6 +1514,7 @@ class refsForm(QWidget):
         if Origin_codeblock:
             modlField = 'Origin'
             self.comboOrigin = incship_cQFmFldWidg(IncShipAppchoiceWidgets.chooseOrigin,
+                lblText='_',
                 modlFld=modlField, parent=self)
             self.formFields[modlField] = (self.comboOrigin, 'HBL')
             self.comboOrigin.signalFldChanged.connect(lambda: self.changeField(self.comboOrigin))

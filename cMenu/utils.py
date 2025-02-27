@@ -606,6 +606,7 @@ class UnderConstruction_Dialog(QDialog):
 class cQFmFldWidg(QWidget):
     _wdgt:QWidget = None
     _label:QLabel = None
+    _labelSetLblText:Callable = None
     _modlField:str = None
     _lblChkYN:QLineEdit = None
     _lblChkYNValues:Dict[bool,str]|None = None
@@ -614,7 +615,7 @@ class cQFmFldWidg(QWidget):
 
     def __init__(self, 
         widgType:type[QWidget], 
-        lblText:str = '', 
+        lblText:str = ' ', 
         lblChkBxYesNo:Dict[bool,str]|None = None,
         alignlblText:Qt.AlignmentFlag = Qt.AlignmentFlag.AlignLeft ,
         modlFld:str = None, 
@@ -634,7 +635,7 @@ class cQFmFldWidg(QWidget):
         if issubclass(widgType, (cDataList, )):
             self._label = QLabel(lblText)
             self.LabelText = self._label.text
-            self.setLabelText = self._label.setText
+            self._labelSetLblText = self._label.setText
 
             self.Value    = wdgt.selectedItem
             self.setValue = wdgt.setText
@@ -646,7 +647,7 @@ class cQFmFldWidg(QWidget):
         elif issubclass(widgType, (QLineEdit, )):
             self._label = QLabel(lblText)
             self.LabelText = self._label.text
-            self.setLabelText = self._label.setText
+            self._labelSetLblText = self._label.setText
 
             self.Value    = wdgt.text
             self.setValue = wdgt.setText
@@ -656,7 +657,7 @@ class cQFmFldWidg(QWidget):
         elif issubclass(widgType, (QTextEdit, QPlainTextEdit, )):
             self._label = QLabel(lblText)
             self.LabelText = self._label.text
-            self.setLabelText = self._label.setText
+            self._labelSetLblText = self._label.setText
 
             self.Value    = wdgt.toPlainText
             self.setValue = wdgt.setPlainText
@@ -666,7 +667,7 @@ class cQFmFldWidg(QWidget):
         elif issubclass(widgType, (cComboBoxFromDict, QComboBox, )):
             self._label = QLabel(lblText)
             self.LabelText = self._label.text
-            self.setLabelText = self._label.setText
+            self._labelSetLblText = self._label.setText
 
             self.Value    = wdgt.currentData
             self.setValue = lambda value: \
@@ -680,7 +681,7 @@ class cQFmFldWidg(QWidget):
         elif issubclass(widgType, (QDateEdit, )):
             self._label = QLabel(lblText)
             self.LabelText = self._label.text
-            self.setLabelText = self._label.setText
+            self._labelSetLblText = self._label.setText
 
             self.Value    = lambda: wdgt.date().toPython()
             self.setValue = wdgt.setDate
@@ -691,9 +692,10 @@ class cQFmFldWidg(QWidget):
         # elif any([self.inherits(tp) for tp in ['QCalendarWidget', ]]):
         # elif any([wdgt.inherits(tp) for tp in ['QCheckBox', ]]):
         elif issubclass(widgType, (QCheckBox, )):
+            self._label = wdgt
             wdgt.setText(lblText)
             self.LabelText = wdgt.text
-            self.setLabelText = wdgt.setText
+            self._labelSetLblText = wdgt.setText
 
             self.Value    = wdgt.isChecked
             self.setValue = lambda value: wdgt.setChecked(value if isinstance(value,bool) else False)
@@ -767,6 +769,10 @@ class cQFmFldWidg(QWidget):
         return wdgt
     #createWidget
 
+    def setLabelText(self, txt:str) -> None:
+        self._labelSetLblText(txt)
+        self._label.repaint()
+        
     def __getattr__(self, name):
         # Delegate attribute access to the contained widget if the attribute
         # is not found in the cQF instance.
