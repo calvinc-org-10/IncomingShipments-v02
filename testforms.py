@@ -24,11 +24,9 @@ from PySide6.QtWidgets import (QApplication, QWidget,
     )
 
 
-from cMenu.utils import cDataList, cQRecordsetView
+from cMenu.utils import cDataList, cQRecordsetView, pleaseWriteMe
 from incShip.models import HBL, Invoices, ShippingForms, Containers, references
 from forms import IncShipAppchoiceWidgets, Invoice_singleForm
-from forms import std_windowsize, fontFormTitle
-from forms import pleaseWriteMe
 
 
 import time

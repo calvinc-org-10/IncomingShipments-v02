@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (QApplication, QWidget, QScrollArea, QMessageBox, 
 from django.apps import apps
 from django.db import models
 from django.db.models import Q, Model
-from cMenu.utils import (cDataList, cComboBoxFromDict, cQFmFldWidg, cDictModel, cQRecordsetView, pleaseWriteMe,  )
+from cMenu.utils import (cDataList, cComboBoxFromDict, cQFmFldWidg, cDictModel, cQRecordsetView, pleaseWriteMe, cQFmNameLabel,   )
 
 from incShip.models import (
     HBL, ShippingForms, PO, Invoices, Containers, 
@@ -34,9 +34,10 @@ from incShip.models import (
 
 _DATE_FORMAT = 'yyyy-MM-dd'
 
-fontFormTitle = QFont()
-fontFormTitle.setFamilies([u"Copperplate Gothic"])
-fontFormTitle.setPointSize(24)
+# move to utils
+# fontFormTitle = QFont()
+# fontFormTitle.setFamilies([u"Copperplate Gothic"])
+# fontFormTitle.setPointSize(24)
 
 
 ##########################################################
@@ -157,14 +158,15 @@ class HBLForm(QWidget):
 
         self.layoutFormHdr = QGridLayout()
         
-        self.lblFormName = QLabel(self)
+        # self.lblFormName = QLabel(self)
+        self.lblFormName = cQFmNameLabel(parent=self)
         wdgt = self.lblFormName
         wdgt.setObjectName(u"lblFormName")
-        wdgt.setFont(fontFormTitle)
-        wdgt.setFrameShape(QFrame.Shape.Panel)
-        wdgt.setFrameShadow(QFrame.Shadow.Raised)
-        wdgt.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        wdgt.setWordWrap(True)
+        # wdgt.setFont(fontFormTitle)
+        # wdgt.setFrameShape(QFrame.Shape.Panel)
+        # wdgt.setFrameShadow(QFrame.Shadow.Raised)
+        # wdgt.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        # wdgt.setWordWrap(True)
         self.layoutFormHdr.addWidget(wdgt,0,0)
         
         modlFld = 'id'
@@ -1378,14 +1380,15 @@ class refsForm(QWidget):
 
         self.layoutFormHdr = QVBoxLayout()
         
-        self.lblFormName = QLabel()
+        # self.lblFormName = QLabel()
+        self.lblFormName = cQFmNameLabel(parent=self)
         wdgt = self.lblFormName
         wdgt.setObjectName(u"lblFormName")
-        wdgt.setFont(fontFormTitle)
-        wdgt.setFrameShape(QFrame.Shape.Panel)
-        wdgt.setFrameShadow(QFrame.Shadow.Raised)
-        wdgt.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        wdgt.setWordWrap(True)
+        # wdgt.setFont(fontFormTitle)
+        # wdgt.setFrameShape(QFrame.Shape.Panel)
+        # wdgt.setFrameShadow(QFrame.Shadow.Raised)
+        # wdgt.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        # wdgt.setWordWrap(True)
         self.layoutFormHdr.addWidget(wdgt)
         
         self.layoutForm.addLayout(self.layoutFormHdr)

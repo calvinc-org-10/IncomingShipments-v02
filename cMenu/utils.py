@@ -792,6 +792,23 @@ class cQFmFldWidg(QWidget):
         self.signalFldChanged.emit(args if args else (None,))
 
 
+class cQFmNameLabel(QLabel):
+    def __init__(self, formName:str = '', parent:QWidget = None):
+        super().__init__(parent)
+        
+        fontFormTitle = QFont()
+        fontFormTitle.setFamilies([u"Copperplate Gothic"])
+        fontFormTitle.setPointSize(24)
+        self.setFont(fontFormTitle)
+        self.setFrameShape(QFrame.Shape.Panel)
+        self.setFrameShadow(QFrame.Shadow.Raised)
+        self.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.setWordWrap(True)
+        
+        if formName:
+            self.setText(formName)
+        
+
 ##################################################
 ##################################################
 ##################################################
@@ -861,4 +878,4 @@ def pretty_show_fns(path_:str):
         result_str += f'{c}\n'
     
     return result_str
-    
+

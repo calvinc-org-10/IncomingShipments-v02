@@ -23,11 +23,12 @@ from PySide6.QtWidgets import (QApplication, QWidget,
     QSizePolicy, QTabWidget, QTextEdit,
     )
 
-from forms import std_popdialogsize, fontFormTitle
+from forms import std_popdialogsize
+
+from cMenu.utils import cQFmNameLabel
 
 class LoadHBL(QWidget):
     _linkedTables = ['ShippingForms', 'PO', 'Invoices', 'Containers', 'reference_ties']
-    lblFormName = QLabel()
 
     lblStatus = QLabel()
 
@@ -38,15 +39,10 @@ class LoadHBL(QWidget):
             self.setObjectName(u"Form")
         self.resize(2*std_popdialogsize)
 
+        self.lblFormName = cQFmNameLabel(parent=self)
         wdgt = self.lblFormName
-        wdgt.setParent(self)
         wdgt.setObjectName(u"lblFormName")
         wdgt.setGeometry(QRect(200, 10, 319, 74))
-        wdgt.setFont(fontFormTitle)
-        wdgt.setFrameShape(QFrame.Shape.Panel)
-        wdgt.setFrameShadow(QFrame.Shadow.Raised)
-        wdgt.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        wdgt.setWordWrap(True)
         
         wdgt = self.lblStatus
         wdgt.setParent(self)

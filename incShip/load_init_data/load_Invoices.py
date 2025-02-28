@@ -22,13 +22,14 @@ from PySide6.QtWidgets import (QApplication, QWidget,
     QSizePolicy, QTabWidget, QTextEdit,
     )
 
-from forms import std_popdialogsize, fontFormTitle
+from forms import std_popdialogsize 
+
+from cMenu.utils import cQFmNameLabel
 
 
 _DEFAULTDATE = date.today()
 
 class LoadInvoices(QWidget):
-    lblFormName = QLabel()
 
     lblStatus = QLabel()
 
@@ -38,15 +39,10 @@ class LoadInvoices(QWidget):
             self.setObjectName(u"Form")
         self.resize(2*std_popdialogsize)
 
+        self.lblFormName = cQFmNameLabel(parent=self)
         wdgt = self.lblFormName
-        wdgt.setParent(self)
         wdgt.setObjectName(u"lblFormName")
         wdgt.setGeometry(QRect(150, 10, 400, 74))
-        wdgt.setFont(fontFormTitle)
-        wdgt.setFrameShape(QFrame.Shape.Panel)
-        wdgt.setFrameShadow(QFrame.Shadow.Raised)
-        wdgt.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        wdgt.setWordWrap(True)
         
         wdgt = self.lblStatus
         wdgt.setParent(self)
