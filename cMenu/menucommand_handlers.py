@@ -13,7 +13,7 @@ from PySide6.QtWidgets import ( QStyle,
     QWidget, QGridLayout, QHBoxLayout, QVBoxLayout, QFormLayout, QFrame, 
     QTableView, QHeaderView,
     QDialog, QMessageBox, QFileDialog, QDialogButtonBox,
-    QLabel, QLCDNumber, QLineEdit, QTextEdit, QPushButton, QCheckBox, QComboBox, 
+    QLabel, QLCDNumber, QLineEdit, QTextEdit, QPlainTextEdit, QPushButton, QCheckBox, QComboBox, 
     QRadioButton, QGroupBox, QButtonGroup, 
     QSizePolicy, 
     )
@@ -27,21 +27,16 @@ from .dbmenulist import (MenuRecords, newgroupnewmenu_menulist, newmenu_menulist
 from sysver import sysver
 from .menucommand_constants import MENUCOMMANDS, COMMANDNUMBER
 from .models import (menuItems, menuGroups, )
-from .utils import (cComboBoxFromDict, cQFmFldWidg, cQFmNameLabel, QRawSQLTableModel, 
+from .utils import (cComboBoxFromDict, cQFmFldWidg, cQFmNameLabel, QRawSQLTableModel, cQFmNameLabel,
     UnderConstruction_Dialog, areYouSure,
-    Excelfile_fromqs, pleaseWriteMe, dictfetchall, 
+    Excelfile_fromqs, ExcelWorkbook_fileext,
+    pleaseWriteMe, dictfetchall, 
     )
 
 # copied from cMenu - if you change it here, change it there
 _NUM_menuBUTTONS:int = 20
 _NUM_menuBUTNCOLS:int = 2
 _NUM_menuBTNperCOL: int = int(_NUM_menuBUTTONS/_NUM_menuBUTNCOLS)
-
-Nochoice = {'---': None}    # only needed for combo boxes, not datalists
-
-fontFormTitle = QFont()
-fontFormTitle.setFamilies([u"Copperplate Gothic"])
-fontFormTitle.setPointSize(24)
 
 
 def FormBrowse(parntWind, formname):
@@ -118,12 +113,7 @@ class QWGetSQL(QWidget):
         # Form Header Layout
         self.layoutFormHdr = QVBoxLayout()
         
-        self.lblFormName = QLabel()
-        self.lblFormName.setFont(fontFormTitle)
-        self.lblFormName.setFrameShape(QFrame.Shape.Panel)
-        self.lblFormName.setFrameShadow(QFrame.Shadow.Raised)
-        self.lblFormName.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.lblFormName.setWordWrap(True)
+        self.lblFormName = cQFmNameLabel()
         self.lblFormName.setText(self.tr('Enter SQL'))
         self.setWindowTitle(self.tr('Enter SQL'))
         self.layoutFormHdr.addWidget(self.lblFormName)
@@ -156,8 +146,11 @@ class QWGetSQL(QWidget):
         self.lblStatusMsg.setText('\n\n')
         
         # Hints
-        self.lblHints = QLabel()
-        self.lblHints.setText('db hints will go here ...')
+        self.lblHints = QPlainTextEdit()
+        self.lblHints.setReadOnly(True)
+        txtHints = 'PRAGMA table_list;'
+        txtHints += '\nPRAGMA table_xinfo(tablname);'
+        self.lblHints.setPlainText(txtHints)
         
         self.layoutForm.addLayout(self.layoutFormHdr)
         self.layoutForm.addLayout(self.layoutFormMain)
@@ -202,31 +195,22 @@ class QWShowSQL(QWidget):
         # Form Header Layout
         self.layoutFormHdr = QVBoxLayout()
         
-        self.lblFormName = QLabel()
-        self.lblFormName.setFont(fontFormTitle)
-        self.lblFormName.setFrameShape(QFrame.Shape.Panel)
-        self.lblFormName.setFrameShadow(QFrame.Shadow.Raised)
-        self.lblFormName.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.lblFormName.setWordWrap(True)
+        self.lblFormName = cQFmNameLabel()
         self.lblFormName.setText(self.tr('SQL Results'))
         self.setWindowTitle(self.tr('SQL Results'))
+        self.layoutFormHdr.addWidget(self.lblFormName)
         
         self.layoutFormSQLDescription = QFormLayout()
-        self.lblOrigSQL = QLabel()
-        self.lblOrigSQL.setText(origSQL)
-        self.lblnRecs = QLabel()
-        self.lblnRecs.setText(f'{len(rows)}')
-        self.lblcolNames = QLabel()
-        self.lblcolNames.setText(str(colNames))
-        self.layoutFormSQLDescription.addRow('SQL Entered:', self.lblOrigSQL)
-        self.layoutFormSQLDescription.addRow('rows affctd:', self.lblnRecs)
-        self.layoutFormSQLDescription.addRow('cols:', self.lblcolNames)
+        lblOrigSQL = QLabel()
+        lblOrigSQL.setText(origSQL)
+        lblnRecs = QLabel()
+        lblnRecs.setText(f'{len(rows)}')
+        lblcolNames = QLabel()
+        lblcolNames.setText(str(colNames))
+        self.layoutFormSQLDescription.addRow('SQL Entered:', lblOrigSQL)
+        self.layoutFormSQLDescription.addRow('rows affctd:', lblnRecs)
+        self.layoutFormSQLDescription.addRow('cols:', lblcolNames)
         
-        self.layoutFormHdr.addWidget(self.lblFormName)
-        self.layoutFormHdr.addSpacing(20)
-        self.layoutFormHdr.addWidget(self.lblOrigSQL)
-        self.layoutFormHdr.addWidget(self.lblnRecs)
-        self.layoutFormHdr.addWidget(self.lblcolNames)
 
         # main area for displaying SQL
         self.layoutFormMain = QVBoxLayout()
@@ -270,7 +254,10 @@ class QWShowSQL(QWidget):
         self.layoutForm.addLayout(self.layoutFormMain)
         self.layoutForm.addWidget(horzline)
         self.layoutForm.addLayout(self.layoutFormActionButtons)
-
+        
+        colfctr = 90
+        self.setMinimumWidth(colfctr*len(colNames))
+        
     @Slot()
     def DLResults(self):
         ExcelFileNamePrefix = "SQLresults"
@@ -278,8 +265,9 @@ class QWShowSQL(QWidget):
         Excel_qdict = self.rows
         xlws = Excelfile_fromqs(Excel_qdict)
         filName, _ = QFileDialog.getSaveFileName(self, 
-            "Enter Spreadsheet File Name",
-            selectedFilter=f'{ExcelFileNamePrefix}*'
+            caption="Enter Spreadsheet File Name",
+            filter=f'{ExcelFileNamePrefix}*{ExcelWorkbook_fileext}',
+            selectedFilter=f'*{ExcelWorkbook_fileext}'
         )
         if filName:
             xlws.save(filName)     
