@@ -400,27 +400,34 @@ class cWidgetMenuItem(QWidget):
             self.dlgButtons:QDialogButtonBox = None # to be defined later, but must exist now
 
             lblDlgTitle = QLabel(self.tr(f' Copy or Move Menu Item {menuID}, {optionNumber}'))
-            
+
+            ##################################################
+            # set up menuGroup, menuID, menuOption comboboxes
             layoutNewItemID = QGridLayout()
+
             lblMenuGroupID = QLabel(self.tr('Menu Group'))
             self.combobxMenuGroupID = cComboBoxFromDict(self.dictmenuGroup(), parent=self)
-            self.combobxMenuGroupID.findData(menuGrp)
-            self.chosenMenuGroup = menuGrp
             self.combobxMenuGroupID.activated.connect(self.loadMenuIDs)
+
             lblMenuID = QLabel(self.tr('Menu'))
             self.combobxMenuID = cComboBoxFromDict(self.dictmenus(menuGrp), parent=self)
             # self.loadMenuIDs(menuGrp) - not necessary - done with initialization
-            self.combobxMenuID.findData(menuID)
             self.combobxMenuID.activated.connect(self.loadMenuOptions)
+
             lblMenuOption = QLabel(self.tr('Option'))
             self.combobxMenuOption = cComboBoxFromDict({}, parent=self)
-            self.loadMenuOptions(menuID)
+            self.combobxMenuOption.activated.connect(self.menuOptionChosen)
+
             layoutNewItemID.addWidget(lblMenuGroupID,0,0)
             layoutNewItemID.addWidget(self.combobxMenuGroupID,1,0)
             layoutNewItemID.addWidget(lblMenuID,0,1)
             layoutNewItemID.addWidget(self.combobxMenuID,1,1)
             layoutNewItemID.addWidget(lblMenuOption,0,2)
             layoutNewItemID.addWidget(self.combobxMenuOption,1,2)
+
+            self.combobxMenuGroupID.setCurrentIndex(self.combobxMenuGroupID.findData(menuGrp))
+            self.loadMenuIDs(menuGrp)
+            ##################################################            
             
             visualgrpboxCopyMove = QGroupBox(self.tr("Copy / Move"))
             layoutgrpCopyMove = QHBoxLayout()
@@ -460,23 +467,37 @@ class cWidgetMenuItem(QWidget):
         def dictmenuOptions(self, mnuID:int) -> List[int]:
             mnuGrp:int = self.combobxMenuGroupID.currentData()
             definedOptions = menuItems.objects.filter(MenuGroup=mnuGrp, MenuID=mnuID).values_list('OptionNumber', flat=True)
-            return Nochoice | { str(n): n for n in range(_NUM_menuBUTTONS) if n not in definedOptions }
+            return Nochoice | { str(n+1): n+1 for n in range(_NUM_menuBUTTONS) if n+1 not in definedOptions }
 
         @Slot()
-        def loadMenuIDs(self, mnuGrp:int):
-            if self.dlgButtons: # this is called once before dlgButtons built
-                self.dlgButtons.button(QDialogButtonBox.StandardButton.Ok).setEnabled(False)
-            self.combobxMenuID.replaceDict(self.dictmenus(mnuGrp))
-        @Slot()
-        def loadMenuOptions(self, mnuID:int):
-            if self.dlgButtons: # this is called once before dlgButtons built
-                self.dlgButtons.button(QDialogButtonBox.StandardButton.Ok).setEnabled(False)
+        def loadMenuIDs(self, idx:int):
+            mnuGrp:int = self.combobxMenuGroupID.currentData()
+            # if self.combobxMenuGroupID.currentIndex() != -1:
+            if mnuGrp is not None:
+                self.combobxMenuID.replaceDict(self.dictmenus(mnuGrp))
+            self.combobxMenuID.setCurrentIndex(-1)
             self.combobxMenuOption.clear()
-            self.combobxMenuOption.replaceDict(self.dictmenuOptions(mnuID))
+            self.enableOKButton()
+        @Slot()
+        def loadMenuOptions(self, idx:int):
+            mnuID:int = self.combobxMenuID.currentData()
+            #if self.combobxMenuID.currentIndex() != -1:
+            if mnuID is not None:
+                self.combobxMenuOption.replaceDict(self.dictmenuOptions(mnuID))
+            self.combobxMenuOption.setCurrentIndex(-1)
+            self.enableOKButton()
         @Slot()
         def menuOptionChosen(self, idx:int):
-            if self.dlgButtons: # this is called once before dlgButtons built
-                self.dlgButtons.button(QDialogButtonBox.StandardButton.Ok).setEnabled(True)
+            self.enableOKButton()
+        def enableOKButton(self):
+            if not self.dlgButtons:
+                return
+            all_GrpIdOption_chosen = all([
+                self.combobxMenuGroupID.currentIndex() != -1,
+                self.combobxMenuID.currentIndex() != -1,
+                self.combobxMenuOption.currentIndex() != -1,
+            ])
+            self.dlgButtons.button(QDialogButtonBox.StandardButton.Ok).setEnabled(all_GrpIdOption_chosen)
         
         def exec(self):
             ret = super().exec()
