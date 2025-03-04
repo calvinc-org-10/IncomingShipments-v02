@@ -28,7 +28,7 @@ from sysver import sysver
 from .menucommand_constants import MENUCOMMANDS, COMMANDNUMBER
 from .models import (menuItems, menuGroups, )
 from .utils import (cComboBoxFromDict, cQFmFldWidg, cQFmNameLabel, QRawSQLTableModel, 
-    UnderConstruction_Dialog,
+    UnderConstruction_Dialog, areYouSure,
     Excelfile_fromqs, pleaseWriteMe, dictfetchall, 
     )
 
@@ -387,6 +387,8 @@ class cMRunSQL(QWidget):
 
 class cWidgetMenuItem(QWidget):
 
+    requestMenuReload:Signal = Signal()
+    
     class cEdtMnuItmDlg_CopyMove_MenuItm(QDialog):
         intCMChoiceCopy:int = 10
         intCMChoiceMove:int = 20
@@ -603,7 +605,7 @@ class cWidgetMenuItem(QWidget):
         self.btnMoveCopy.setStyleSheet("padding: 2px; margin: 0;")  # Remove extra padding
 
         self.btnRemove = QPushButton(self.tr('Remove'), self)
-        # self.btnRemove.clicked.connect()
+        self.btnRemove.clicked.connect(self.rmvMenuOption)
         # self.btnRemove.setFixedSize(60, 30)  # Adjust width and height
         self.btnRemove.setStyleSheet("padding: 2px; margin: 0;")  # Remove extra padding
 
@@ -735,18 +737,29 @@ class cWidgetMenuItem(QWidget):
     ########    Delete
 
     def rmvMenuOption(self):
-        ...
+        # verify delete
         (mGrp, mnu, mOpt) = (self.currRec.MenuGroup, self.currRec.MenuID, self.currRec.OptionNumber)
         
-        # verify delete
+        really = areYouSure(self, 
+            title="Remove Menu Option?",
+            areYouSureQuestion=f'Really remove menu option {mGrp}, {mnu}, {mOpt} ({self.currRec.OptionText}) ?'
+            )
+        
+        if really != QMessageBox.StandardButton.Yes:
+            return
         
         # remove from db
         if self.currRec.pk:
             self.currRec.delete()
+            
+        self.makeCurrecEmpty(mGrp, mnu, mOpt)
         
+        self.requestMenuReload.emit()   # let listeners know we need a menu reload
+
+    def makeCurrecEmpty(self, mGrp, mnu, mOpt):
         # replace with an empty record
         self.currRec = menuItems(
-            MenuGroup = mGrp,
+            MenuGroup_id = mGrp,
             MenuID = mnu,
             OptionNumber =mOpt,
             )
@@ -787,25 +800,23 @@ class cWidgetMenuItem(QWidget):
 
         dlg = self.cEdtMnuItmDlg_CopyMove_MenuItm(mnuGrp, mnuID, optNum, self)
         retval, CMChoiceCopy, newMnuID = dlg.exec()
-        print(f'from {mnuGrp=}, {mnuID=}, {optNum=}')
-        print(f'to {retval=}, {CMChoiceCopy=}, {newMnuID=}')
-        # RESTARTHERE
-        # if retval:
-        #     qsFrom = self.currentMenu
-        #     if CMChoiceCopy:
-        #         qsdictTo = [
-        #             menuItems(**{**record.__dict__, "id": None, "MenuID": newMnuID})  # Set id to None to create new records
-        #             for record in qsFrom
-        #         ]
-
-        #         # Bulk insert the new records
-        #         if qsdictTo:
-        #             with transaction.atomic():
-        #                 menuItems.objects.bulk_create(qsdictTo)
-        #     else:
-        #         qsFrom.update(MenuID=newMnuID)
-        #     #endif CMChoiceCopy
-        #     self.loadMenu(mnuGrp, newMnuID)
+        if retval:
+            newrec = menuItems.objects.get(pk=cRec.pk)
+            newrec.pk = None
+            newrec.MenuGroup_id = newMnuID[0]
+            newrec.MenuID = newMnuID[1]
+            newrec.OptionNumber = newMnuID[2]
+            newrec.save()
+            
+            if CMChoiceCopy:
+                ... # we've done everything we need to do
+            else:
+                if cRec.pk:
+                    cRec.delete()
+                self.makeCurrecEmpty(mnuGrp, mnuID, optNum)
+            #endif CMChoiceCopy
+            
+            self.requestMenuReload.emit()   # let listeners know we need a menu reload
         # #endif retval
 
         return
@@ -1092,6 +1103,7 @@ class cEditMenu(QWidget):
                 del oldWdg
 
             self.WmenuItm[bNum] = self.wdgtmenuITEM(mnuItmRc)
+            self.WmenuItm[bNum].requestMenuReload.connect(lambda: self.loadMenu(self.intmenuGroup, self.intmenuID))
             self.layoutmainMenu.addWidget(self.WmenuItm[bNum],y,x) 
         # endfor
      
