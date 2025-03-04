@@ -636,6 +636,7 @@ class cQFmFldWidg(QWidget):
             self._label = QLabel(lblText)
             self.LabelText = self._label.text
             self._labelSetLblText = self._label.setText
+            self._label.setBuddy(wdgt)
 
             self.Value    = wdgt.selectedItem
             self.setValue = wdgt.setText
@@ -648,6 +649,7 @@ class cQFmFldWidg(QWidget):
             self._label = QLabel(lblText)
             self.LabelText = self._label.text
             self._labelSetLblText = self._label.setText
+            self._label.setBuddy(wdgt)
 
             self.Value    = wdgt.text
             self.setValue = wdgt.setText
@@ -658,6 +660,7 @@ class cQFmFldWidg(QWidget):
             self._label = QLabel(lblText)
             self.LabelText = self._label.text
             self._labelSetLblText = self._label.setText
+            self._label.setBuddy(wdgt)
 
             self.Value    = wdgt.toPlainText
             self.setValue = wdgt.setPlainText
@@ -668,6 +671,7 @@ class cQFmFldWidg(QWidget):
             self._label = QLabel(lblText)
             self.LabelText = self._label.text
             self._labelSetLblText = self._label.setText
+            self._label.setBuddy(wdgt)
 
             self.Value    = wdgt.currentData
             self.setValue = lambda value: \
@@ -682,6 +686,7 @@ class cQFmFldWidg(QWidget):
             self._label = QLabel(lblText)
             self.LabelText = self._label.text
             self._labelSetLblText = self._label.setText
+            self._label.setBuddy(wdgt)
 
             self.Value    = lambda: wdgt.date().toPython()
             self.setValue = wdgt.setDate
@@ -878,4 +883,3 @@ def pretty_show_fns(path_:str):
         result_str += f'{c}\n'
     
     return result_str
-
