@@ -40,9 +40,9 @@ _NUM_menuBTNperCOL: int = int(_NUM_menuBUTTONS/_NUM_menuBUTNCOLS)
 
 Nochoice = {'---': None}    # only needed for combo boxes, not datalists
 
-fontFormTitle = QFont()
-fontFormTitle.setFamilies([u"Copperplate Gothic"])
-fontFormTitle.setPointSize(24)
+# fontFormTitle = QFont()
+# fontFormTitle.setFamilies([u"Copperplate Gothic"])
+# fontFormTitle.setPointSize(24)
 
 
 def FormBrowse(parntWind, formname):
