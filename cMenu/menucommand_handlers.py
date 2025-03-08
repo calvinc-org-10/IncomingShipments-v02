@@ -1237,14 +1237,20 @@ class cEditMenu(QWidget):
 
     ##########################################
     ########    Widget-responding procs
-# class Test02
+# class EditMenu
 
 
 #############################################
 #############################################
 #############################################
 
-class _specialforms:
+
+#############################################
+#############################################
+#############################################
+
+
+class _internalForms:
     EditMenu = '.-EDT-menu.-'
     # RunCode = ''
     RunSQLStatement = '.-ruN-sql.-'
@@ -1255,6 +1261,6 @@ class _specialforms:
     # EditGreetings = ''
 # FormNameToURL_Maps for internal use only
 # FormNameToURL_Map['menu Argument'.lower()] = (url, view)
-FormNameToURL_Map[_specialforms.EditMenu] = (None, cEditMenu)
-FormNameToURL_Map[_specialforms.RunSQLStatement] = (None, cMRunSQL)
+FormNameToURL_Map[_internalForms.EditMenu] = (None, cEditMenu)
+FormNameToURL_Map[_internalForms.RunSQLStatement] = (None, cMRunSQL)
 

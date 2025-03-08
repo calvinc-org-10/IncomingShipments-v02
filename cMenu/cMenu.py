@@ -185,7 +185,7 @@ class cMenu(QWidget):
             if frm: 
                 self.open_childScreen(CommandArg, frm)
         elif MENUCOMMANDS.get(CommandNum) == 'RunSQLStatement':
-            CArg = menucommand_handlers._specialforms.RunSQLStatement
+            CArg = menucommand_handlers._internalForms.RunSQLStatement
             frm:QWidget = menucommand_handlers.FormBrowse(self, CArg)
             if frm: 
                 self.open_childScreen(CArg, frm)
@@ -198,7 +198,7 @@ class cMenu(QWidget):
         #     return
             # return redirect('change_password')
         elif MENUCOMMANDS.get(CommandNum) == 'EditMenu':
-            CArg = menucommand_handlers._specialforms.EditMenu
+            CArg = menucommand_handlers._internalForms.EditMenu
             frm:QWidget = menucommand_handlers.FormBrowse(self, CArg)
             if frm: 
                 self.open_childScreen(CArg, frm)
