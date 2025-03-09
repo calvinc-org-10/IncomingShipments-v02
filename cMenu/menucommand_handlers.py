@@ -1,4 +1,4 @@
-from typing import (Dict, List, Any, )
+from typing import (Dict, List, Tuple, Any, )
 
 from django import db
 from django.db import transaction
@@ -45,7 +45,7 @@ Nochoice = {'---': None}    # only needed for combo boxes, not datalists
 # fontFormTitle.setPointSize(24)
 
 
-def FormBrowse(parntWind, formname):
+def FormBrowse(parntWind, formname, *args, **kwargs):
     urlIndex = 0
     viewIndex = 1
 
@@ -77,7 +77,7 @@ def FormBrowse(parntWind, formname):
             #end try
             if viewExists:
                 # dtheForm = fn(parntWind)
-                theForm = fn()
+                theForm = fn(*args, **kwargs)
             else:  
                 formname = f'{formname} exists but view {FormNameToURL_Map[formname][viewIndex]}'
             #endif
@@ -1244,6 +1244,112 @@ class cEditMenu(QWidget):
 #############################################
 #############################################
 
+class OpenTable(QWidget):
+    _tableListSQL:str = 'PRAGMA table_list;'
+    
+    def __init__(self, tbl:str = None, parent:QWidget = None):
+        super().__init__(parent)
+        
+        # font = QFont()
+        # font.setPointSize(12)
+        # self.setFont(font)
+        
+        if not tbl:
+            # get tbl name
+                # use self._tableListSQL
+            # read all table names
+            # present and select
+            ...
+        
+        # for testing ...
+        tbl = 'incShip_hbl'
+        
+        # read into model
+        # verify tbl exists
+        error, rows, colNames = self.getTable(tbl)
+        if error:
+            raise error
+        
+        # save incoming for future use if needed
+        self.rows = rows
+        self.colNames = colNames
+
+        tblWidget = self.tableWidget(rows, colNames)
+        
+        # present TableView
+
+        self.layoutForm = QVBoxLayout(self)
+        
+        # Form Header Layout
+        self.layoutFormHdr = QVBoxLayout()
+        self.lblFormName = cQFmNameLabel()
+        self.lblFormName.setText(self.tr('Table'))
+        self.setWindowTitle(self.tr('Table'))
+        self.layoutFormHdr.addWidget(self.lblFormName)
+        
+        self.layoutFormTableDescription = QFormLayout()
+        lblnRecs = QLabel()
+        lblnRecs.setText(f'{len(rows)}')
+        lblcolNames = QLabel()
+        lblcolNames.setText(str(colNames))
+        self.layoutFormTableDescription.addRow('rows:', lblnRecs)
+        self.layoutFormTableDescription.addRow('cols:', lblcolNames)
+
+        # main area for displaying SQL
+        self.layoutFormMain = QVBoxLayout()
+        self.layoutFormMain.addWidget(tblWidget)
+        
+        self.layoutForm.addLayout(self.layoutFormHdr)
+        self.layoutForm.addLayout(self.layoutFormTableDescription)
+        self.layoutForm.addLayout(self.layoutFormMain)
+        
+    def getTable(self, tblName:str) -> Tuple[Exception|None, List[Dict[str, Any]], List[str]|str]:
+        inputSQL:str = f'SELECT * FROM {tblName}'
+        # inputSQL:str = f'SELECT * FROM %(tblName)s'
+        sqlerr = None
+        with db.connection.cursor() as djngocursor:
+            try:
+                djngocursor.execute(inputSQL)
+                # djngocursor.execute(inputSQL, [tblName])
+            except Exception as err:
+                sqlerr = err
+            colNames = []
+            rows = []
+            if not sqlerr:
+                if djngocursor.description:
+                    colNames = [col[0] for col in djngocursor.description]
+                    rows = dictfetchall(djngocursor)
+                else:
+                    colNames = 'NO RECORDS RETURNED; ' + str(djngocursor.rowcount) + ' records affected'
+                    rows = []
+                #endif cursor.description
+            else:  
+                # nothing to do
+                ...
+            #endif not sqlerr
+        #end with
+        
+        return (sqlerr, rows, colNames)
+
+    def tableWidget(self, rows:List[Dict[str, Any]], colNames:str|List[str]) -> QTableView:
+        resultModel = QRawSQLTableModel(rows, colNames, self.parent())
+        resultTable = QTableView()
+        # resultTable.verticalHeader().setHidden(True)
+        header = resultTable.horizontalHeader()
+        header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        # Apply stylesheet to control text wrapping
+        resultTable.setStyleSheet("""
+        QHeaderView::section {
+            padding: 5px;
+            font-size: 12px;
+            text-align: center;
+            white-space: normal;  /* Allow text to wrap */
+        }
+        """)
+        resultTable.setModel(resultModel)
+        
+        return resultTable
+        
 
 #############################################
 #############################################
@@ -1252,6 +1358,7 @@ class cEditMenu(QWidget):
 
 class _internalForms:
     EditMenu = '.-EDT-menu.-'
+    OpenTable = '-.OPN-tbL.-'
     # RunCode = ''
     RunSQLStatement = '.-ruN-sql.-'
     # ConstructSQLStatement = ''
@@ -1262,5 +1369,6 @@ class _internalForms:
 # FormNameToURL_Maps for internal use only
 # FormNameToURL_Map['menu Argument'.lower()] = (url, view)
 FormNameToURL_Map[_internalForms.EditMenu] = (None, cEditMenu)
+FormNameToURL_Map[_internalForms.OpenTable] = (None, OpenTable)
 FormNameToURL_Map[_internalForms.RunSQLStatement] = (None, cMRunSQL)
 

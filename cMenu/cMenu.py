@@ -179,16 +179,20 @@ class cMenu(QWidget):
         if MENUCOMMANDS.get(CommandNum) == 'LoadMenu' :
             CommandArg = int(CommandArg)
             self.loadMenu(self.menuGroup, CommandArg)
-        elif MENUCOMMANDS.get(CommandNum) == 'FormBrowse' \
-          or MENUCOMMANDS.get(CommandNum) == 'OpenTable' :
+        elif MENUCOMMANDS.get(CommandNum) == 'FormBrowse':
             frm:QWidget = menucommand_handlers.FormBrowse(self, CommandArg.lower())
             if frm: 
                 self.open_childScreen(CommandArg, frm)
-        elif MENUCOMMANDS.get(CommandNum) == 'RunSQLStatement':
-            CArg = menucommand_handlers._internalForms.RunSQLStatement
-            frm:QWidget = menucommand_handlers.FormBrowse(self, CArg)
+        elif MENUCOMMANDS.get(CommandNum) == 'OpenTable' :
+            CmdFm = menucommand_handlers._internalForms.OpenTable
+            frm:QWidget = menucommand_handlers.FormBrowse(self, CmdFm, CommandArg)
             if frm: 
-                self.open_childScreen(CArg, frm)
+                self.open_childScreen(CmdFm, frm)
+        elif MENUCOMMANDS.get(CommandNum) == 'RunSQLStatement':
+            CmdFm = menucommand_handlers._internalForms.RunSQLStatement
+            frm:QWidget = menucommand_handlers.FormBrowse(self, CmdFm)
+            if frm: 
+                self.open_childScreen(CmdFm, frm)
         # elif MENUCOMMANDS.get(CommandNum) == 'ConstructSQLStatement':
         #    pass
         # elif MENUCOMMANDS.get(CommandNum)  == 'LoadExtWebPage':
@@ -198,10 +202,10 @@ class cMenu(QWidget):
         #     return
             # return redirect('change_password')
         elif MENUCOMMANDS.get(CommandNum) == 'EditMenu':
-            CArg = menucommand_handlers._internalForms.EditMenu
-            frm:QWidget = menucommand_handlers.FormBrowse(self, CArg)
+            CmdFm = menucommand_handlers._internalForms.EditMenu
+            frm:QWidget = menucommand_handlers.FormBrowse(self, CmdFm)
             if frm: 
-                self.open_childScreen(CArg, frm)
+                self.open_childScreen(CmdFm, frm)
         # elif MENUCOMMANDS.get(CommandNum) == 'EditParameters':
         #     return
             # return redirect('EditParms')
