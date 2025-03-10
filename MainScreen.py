@@ -4,7 +4,7 @@ from PySide6.QtCore import (QCoreApplication, QMetaObject, )
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QScrollArea )
 
 from cMenu.cMenu import cMenu
-from forms import std_windowsize
+# from forms import std_windowsize
 
 
 class MainScreen(QWidget):

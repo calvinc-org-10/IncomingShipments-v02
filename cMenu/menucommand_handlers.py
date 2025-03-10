@@ -8,6 +8,7 @@ from django.db.backends.utils import CursorWrapper
 from PySide6.QtCore import (Qt, QObject,
     Signal, Slot, 
     QAbstractTableModel, QModelIndex, )
+from PySide6.QtSql import (QSqlDatabase, QSqlTableModel, )
 from PySide6.QtGui import (QFont, QIcon, )
 from PySide6.QtWidgets import ( QStyle, 
     QWidget, QGridLayout, QHBoxLayout, QVBoxLayout, QFormLayout, QFrame, 
@@ -1244,6 +1245,51 @@ class cEditMenu(QWidget):
 #############################################
 #############################################
 
+
+class cQSQLTableModel_NEW(QSqlTableModel):
+    # def __init__(self, rows:List[Dict[str,Any]], colNames:List[str], parent:QObject = None):
+    def __init__(self, tblName:str, db:QSqlDatabase = QSqlDatabase.database(), parent:QObject = None):
+        super().__init__(parent, db)
+        self.setTable(tblName)
+        self.setEditStrategy(QSqlTableModel.EditStrategy.OnManualSubmit)    # think about this - pass as parm?
+        self.select()
+    
+    # def rowCount(self, parent = QModelIndex()):
+    #     return len(self.queryset)
+    
+    # def columnCount(self, parent = QModelIndex()):
+    #     return len(self.headers)
+    
+    # def data(self, index, role = Qt.DisplayRole):
+    #     if not index.isValid():
+    #         return None
+    #     if role == Qt.ItemDataRole.DisplayRole:
+    #         rec = self.queryset[index.row()]
+    #         fldName = self.headers[index.column()]
+    #         value = rec[fldName]
+
+    #         return value
+    #     # endif role
+    #     return None
+
+    # # not editable - don't need setData
+
+    # def headerData(self, section, orientation, role = Qt.DisplayRole):
+    #     if role == Qt.DisplayRole:
+    #         if orientation == Qt.Orientation.Horizontal:
+    #             return self.headers[section]
+    #         elif orientation == Qt.Orientation.Vertical:
+    #             return str(section+1)
+    #         #endif orientation
+    #     # endif role
+    #     return None
+
+
+#############################################
+#############################################
+#############################################
+
+from incShip.database import incShipDatabase
 class OpenTable(QWidget):
     _tableListSQL:str = 'PRAGMA table_list;'
     
@@ -1254,6 +1300,7 @@ class OpenTable(QWidget):
         # font.setPointSize(12)
         # self.setFont(font)
         
+        db = incShipDatabase
         if not tbl:
             # get tbl name
                 # use self._tableListSQL
@@ -1266,7 +1313,8 @@ class OpenTable(QWidget):
         
         # read into model
         # verify tbl exists
-        error, rows, colNames = self.getTable(tbl)
+        # error, rows, colNames = self.getTable(tbl)
+        error, rows, colNames = (None, [], [])
         if error:
             raise error
         
@@ -1274,7 +1322,8 @@ class OpenTable(QWidget):
         self.rows = rows
         self.colNames = colNames
 
-        tblWidget = self.tableWidget(rows, colNames)
+        # tblWidget = self.tableWidget(rows, colNames)
+        tblWidget = self.tableWidget(tbl, db)
         
         # present TableView
 
@@ -1331,8 +1380,9 @@ class OpenTable(QWidget):
         
         return (sqlerr, rows, colNames)
 
-    def tableWidget(self, rows:List[Dict[str, Any]], colNames:str|List[str]) -> QTableView:
-        resultModel = QRawSQLTableModel(rows, colNames, self.parent())
+    # def tableWidget(self, rows:List[Dict[str, Any]], colNames:str|List[str]) -> QTableView:
+    def tableWidget(self, tbl, db) -> QTableView:
+        resultModel = cQSQLTableModel_NEW(tbl, db, self.parent())
         resultTable = QTableView()
         # resultTable.verticalHeader().setHidden(True)
         header = resultTable.horizontalHeader()
