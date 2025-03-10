@@ -1324,7 +1324,11 @@ class OpenTable(QWidget):
 
         # tblWidget = self.tableWidget(rows, colNames)
         tblWidget = self.tableWidget(tbl, db)
-        
+        # bring all rows in so rowCount will be correct
+        while tblWidget.model().canFetchMore():
+            tblWidget.model().fetchMore()
+        rows = tblWidget.model().rowCount()
+        colNames = [tblWidget.model().headerData(n, Qt.Orientation.Horizontal) for n in range(tblWidget.model().columnCount())]
         # present TableView
 
         self.layoutForm = QVBoxLayout(self)
@@ -1338,7 +1342,7 @@ class OpenTable(QWidget):
         
         self.layoutFormTableDescription = QFormLayout()
         lblnRecs = QLabel()
-        lblnRecs.setText(f'{len(rows)}')
+        lblnRecs.setText(f'{rows}')
         lblcolNames = QLabel()
         lblcolNames.setText(str(colNames))
         self.layoutFormTableDescription.addRow('rows:', lblnRecs)

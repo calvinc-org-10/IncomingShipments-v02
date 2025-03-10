@@ -1,18 +1,19 @@
 from PySide6.QtSql import (QSqlDatabase, QSqlQuery )
 
-cMenu_dbName = 'W:\\Logistics\\db\\hbl.sqlite'
+incShip_dbName = 'W:\\Logistics\\db\\hbl.sqlite'
 
 
 class incShipdb(QSqlDatabase):
     def __init__(self):
         dbDriver = 'QSQLITE'
         connectName = 'con_incShip'
-        super().__init__()
+        db = QSqlDatabase.addDatabase(dbDriver, connectName)
+        super().__init__(db)
         # con = PQconnectdb("host=server user=bart password=simpson dbname=springfield")
         # drv = QPSQLDriver(con)
-        self.addDatabase(dbDriver, connectName)
-        self.setDatabaseName(cMenu_dbName)
-        self.open()      # this should be checked for success, but for now, take the errors raised if bad
+        self.setDatabaseName(incShip_dbName)
+        res = self.open()      # this should be checked for success, but for now, take the errors raised if bad
+        print(f'incShipdb.open gave {res}')
         # query = QSqlQuery()
         # query.exec("SELECT NAME, ID FROM STAFF")        
         # super().__init__(dbDriver)
