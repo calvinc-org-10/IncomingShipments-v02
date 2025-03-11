@@ -95,60 +95,97 @@ newmenu_menulist = [
 ]
 
 
-from django.db.models import Min, QuerySet
-from .models import menuItems
+# from django.db.models import Min, QuerySet
+# from .models import menuItems
+from PySide6.QtSql import (QSqlRelationalTableModel, QSqlTableModel, QSqlRecord, QSqlQuery, )
+from .database import cMenuDatabase
 
-class MenuRecords(object):
-    mSource = menuItems.objects
+class MenuRecords(QSqlRelationalTableModel):
+    # mSource = menuItems.objects
+    _tblName = 'cMenu_menuitems'
+    _db = cMenuDatabase
     
+    def __init__(self, parent = None, db = None):
+        if db is None:
+            db = self._db
+        super().__init__(parent, db)
+        self.setTable(self._tblName)
+        self.setEditStrategy(QSqlTableModel.EditStrategy.OnManualSubmit)    # think about this - pass as parm?
+        self.setRelation
+        self.select()
+        
+
     def menuAttr(self, mGroup:int, mID:int, Opt:int, AttrName:str) -> Any:
-        return self.mSource.filter(MenuGroup=mGroup,MenuID=mID,OptionNumber=Opt).first().values(AttrName)
-        return list(menuRec['values'][AttrName] \
-                        for menuRec in self.mSource \
-                        if menuRec['keys']['MenuGroup']==mGroup \
-                            and menuRec['keys']['MenuID']==mID \
-                            and menuRec['keys']['OptionNumber']==Opt \
-            )[0]
+        cond = f'MenuGroup={mGroup} AND MenuID={mID} AND OptionNumber={Opt}'
+        self.setFilter(cond)
+        return self.record(0).field(AttrName).value()
+        # return self.mSource.filter(MenuGroup=mGroup,MenuID=mID,OptionNumber=Opt).first().values(AttrName)
+        # return list(menuRec['values'][AttrName] \
+        #                 for menuRec in self.mSource \
+        #                 if menuRec['keys']['MenuGroup']==mGroup \
+        #                     and menuRec['keys']['MenuID']==mID \
+        #                     and menuRec['keys']['OptionNumber']==Opt \
+        #     )[0]
 
     def dfltMenuID_forGroup(self, mGroup:int) -> int:
-        if self.mSource.filter(MenuGroup=mGroup,Argument__iexact='default',OptionNumber=0).exists():
-            return self.mSource.filter(MenuGroup=mGroup,Argument__iexact='default',OptionNumber=0).first().MenuID
-        else:
-            return self.mSource.filter(MenuGroup=mGroup,OptionNumber=0).aggregate(mID=Min('MenuID'))['mID']
-        return list(menuRec['keys']['MenuID'] \
-                        for menuRec in self.mSource \
-                        if menuRec['keys']['MenuGroup']==mGroup \
-                            and menuRec['keys']['OptionNumber']==0 \
-                            and menuRec['values']['Argument'].lower() == 'default'\
-            )[0]
+        cond = f'MenuGroup={mGroup} AND Argument LIKE "default" AND OptionNumber=0'
+        self.setFilter(cond)
+        # if self.filter(MenuGroup=mGroup,Argument__iexact='default',OptionNumber=0).exists():
+        if self.record(0).isEmpty():
+            cond = f'MenuGroup={mGroup} AND OptionNumber=0'
+            mincond = f'MenuID = MIN(MenuID) FILTER (WHERE {cond})'
+            self.setFilter(mincond)
+        return self.record(0).field('MenuID').value()
+        # return list(menuRec['keys']['MenuID'] \
+        #                 for menuRec in self.mSource \
+        #                 if menuRec['keys']['MenuGroup']==mGroup \
+        #                     and menuRec['keys']['OptionNumber']==0 \
+        #                     and menuRec['values']['Argument'].lower() == 'default'\
+        #     )[0]
     
     def dfltMenuGroup(self) -> int:
-        return self.mSource.aggregate(mGroup=Min('MenuGroup'))['mGroup']
+        mincond = f'MenuGroup = MIN(MenuGroup)'
+        self.setFilter(mincond)
+        return self.record(0).field('MenuGroup').value()
+        # return self.aggregate(mGroup=Min('MenuGroup'))['mGroup']
     
-    def menuDict(self, mGroup:int, mID:int) ->  Dict[int,Dict]:
-        return { mRec['OptionNumber']: mRec for mRec in self.mSource.filter(MenuGroup=mGroup,MenuID=mID).values() }
-        return { mRec['keys']['OptionNumber']: mRec['values'] \
-                    for mRec in self.mSource \
-                    if mRec['keys']['MenuGroup']==mGroup \
-                        and mRec['keys']['MenuID']==mID 
-            }
+    def menuDict(self, mGroup:int, mID:int) ->  Dict[int,Dict[str, Any]]:
+        cond = f'MenuGroup={mGroup} AND MenuID={mID}'
+        self.setFilter(cond)
+        return { self.record(n).field('OptionNumber'): 
+                    { self.record(n).fieldName(f): self.record(n).field(f).value() for f in range(self.columnCount())}
+                for n in range(self.rowCount()) }
+        # return { mRec['OptionNumber']: mRec for mRec in self.filter(MenuGroup=mGroup,MenuID=mID).values() }
+        # return { mRec['keys']['OptionNumber']: mRec['values'] \
+        #             for mRec in self.mSource \
+        #             if mRec['keys']['MenuGroup']==mGroup \
+        #                 and mRec['keys']['MenuID']==mID 
+        #     }
     
-    def menuDBRecs(self, mGroup:int, mID:int) ->  QuerySet:
-        return self.mSource.filter(MenuGroup=mGroup,MenuID=mID)
-        return { mRec['keys']['OptionNumber']: mRec['values'] \
-                    for mRec in self.mSource \
-                    if mRec['keys']['MenuGroup']==mGroup \
-                        and mRec['keys']['MenuID']==mID 
-            }
+    # def menuDBRecs(self, mGroup:int, mID:int) ->  QuerySet:
+    def menuDBRecs(self, mGroup:int, mID:int) ->  Dict[int, QSqlRecord]:
+        cond = f'MenuGroup={mGroup} AND MenuID={mID}'
+        self.setFilter(cond)
+        return { self.record(n).field('OptionNumber'): QSqlRecord(self.record(n)) 
+                for n in range(self.rowCount()) }
+        # return self.filter(MenuGroup=mGroup,MenuID=mID)
+        # return { mRec['keys']['OptionNumber']: mRec['values'] \
+        #             for mRec in self.mSource \
+        #             if mRec['keys']['MenuGroup']==mGroup \
+        #                 and mRec['keys']['MenuID']==mID 
+        #     }
     
     def menuExist(self, mGroup:int, mID:int) ->  bool:
-        return self.mSource.filter(MenuGroup=mGroup,MenuID=mID,OptionNumber=0).exists()
-        return any(list(True \
-                    for mRec in self.mSource \
-                    if mRec['keys']['MenuGroup']==mGroup \
-                        and mRec['keys']['MenuID']==mID \
-                        and mRec['keys']['OptionNumber']==0 \
-            ))
+        sqlstmnt = f' SELECT 1 FROM {self._tblName} WHERE MenuGroup={mGroup} AND MenuID={mID} AND OptionNumber=0'
+        tmpQuery = QSqlQuery(sqlstmnt, self._db)
+        return tmpQuery.first()
+        # return self.filter(MenuGroup=mGroup,MenuID=mID,OptionNumber=0).exists()
+        # return any(list(True \
+        #             for mRec in self.mSource \
+        #             if mRec['keys']['MenuGroup']==mGroup \
+        #                 and mRec['keys']['MenuID']==mID \
+        #                 and mRec['keys']['OptionNumber']==0 \
+        #     ))
 
     def newgroupnewmenuDict(self, mGroup:int, mID:int) ->  List[Dict]:
         return newgroupnewmenu_menulist

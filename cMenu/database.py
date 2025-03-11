@@ -13,7 +13,6 @@ class cMenudb(QSqlDatabase):
         # drv = QPSQLDriver(con)
         self.setDatabaseName(cMenu_dbName)
         res = self.open()      # this should be checked for success, but for now, take the errors raised if bad
-        print(f'cMenudb.open gave {res}')
         # query = QSqlQuery()
         # query.exec("SELECT NAME, ID FROM STAFF")        
         # super().__init__(dbDriver)
