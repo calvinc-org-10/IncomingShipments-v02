@@ -1318,10 +1318,6 @@ class OpenTable(QWidget):
         if error:
             raise error
         
-        # save incoming for future use if needed
-        self.rows = rows
-        self.colNames = colNames
-
         # tblWidget = self.tableWidget(rows, colNames)
         tblWidget = self.tableWidget(tbl, db)
         # bring all rows in so rowCount will be correct
@@ -1330,6 +1326,10 @@ class OpenTable(QWidget):
         rows = tblWidget.model().rowCount()
         colNames = [tblWidget.model().headerData(n, Qt.Orientation.Horizontal) for n in range(tblWidget.model().columnCount())]
         # present TableView
+
+        # save incoming for future use if needed
+        self.rows = rows
+        self.colNames = colNames
 
         self.layoutForm = QVBoxLayout(self)
         
