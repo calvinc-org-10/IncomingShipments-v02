@@ -67,3 +67,40 @@ db2.close()
 - Always check for errors when opening databases and executing queries.
 
 This approach allows you to manage multiple database connections and execute queries on each independently.
+
+
+======================================================
+======================================================
+
+-- cMenu_menuitems definition
+
+CREATE TABLE "cMenu_menuitems" (
+    "id" integer NOT NULL PRIMARY KEY AUTOINCREMENT, 
+    "MenuID" smallint NOT NULL, 
+    "OptionNumber" smallint NOT NULL, 
+    "OptionText" varchar(250) NOT NULL, 
+    "Command" integer NULL, 
+    "Argument" varchar(250) NOT NULL, 
+    "PWord" varchar(250) NOT NULL, 
+    "TopLine" bool NULL, 
+    "BottomLine" bool NULL, 
+    "MenuGroup_id" bigint NULL REFERENCES "cMenu_menugroups" ("id") DEFERRABLE INITIALLY DEFERRED, 
+    CONSTRAINT "mnuItUNQ_mGrp_mID_OptNum" UNIQUE ("MenuGroup_id", "MenuID", "OptionNumber"));
+
+CREATE INDEX "cMenu_menuitems_MenuGroup_id_e8382487" ON "cMenu_menuitems" ("MenuGroup_id");
+
+-- cMenu_menugroups definition
+
+CREATE TABLE "cMenu_menugroups" (
+    "id" integer NOT NULL PRIMARY KEY AUTOINCREMENT, 
+    "GroupName" varchar(100) NOT NULL UNIQUE, 
+    "GroupInfo" varchar(250) NOT NULL);
+
+-- cMenu_cparameters definition
+
+CREATE TABLE "cMenu_cparameters" (
+    "ParmName" varchar(100) NOT NULL PRIMARY KEY, 
+    "ParmValue" varchar(512) NOT NULL, 
+    "UserModifiable" bool NOT NULL, 
+    "Comments" varchar(512) NOT NULL);
+
