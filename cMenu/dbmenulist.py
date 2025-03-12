@@ -97,7 +97,7 @@ newmenu_menulist = [
 
 # from django.db.models import Min, QuerySet
 # from .models import menuItems
-from PySide6.QtSql import (QSqlRelationalTableModel, QSqlTableModel, QSqlRecord, QSqlQuery, )
+from PySide6.QtSql import (QSqlRelationalTableModel, QSqlRelation, QSqlTableModel, QSqlRecord, QSqlQuery,  )
 from .database import cMenuDatabase
 
 class MenuRecords(QSqlRelationalTableModel):
@@ -111,12 +111,12 @@ class MenuRecords(QSqlRelationalTableModel):
         super().__init__(parent, db)
         self.setTable(self._tblName)
         self.setEditStrategy(QSqlTableModel.EditStrategy.OnManualSubmit)    # think about this - pass as parm?
-        self.setRelation
+        self.setRelation(self.fieldIndex('MenuGroup_id'), QSqlRelation('cMenu_menugroups', 'id', 'GroupName'))
         self.select()
         
 
     def menuAttr(self, mGroup:int, mID:int, Opt:int, AttrName:str) -> Any:
-        cond = f'MenuGroup={mGroup} AND MenuID={mID} AND OptionNumber={Opt}'
+        cond = f'MenuGroup_id={mGroup} AND MenuID={mID} AND OptionNumber={Opt}'
         self.setFilter(cond)
         return self.record(0).field(AttrName).value()
         # return self.mSource.filter(MenuGroup=mGroup,MenuID=mID,OptionNumber=Opt).first().values(AttrName)
@@ -128,7 +128,7 @@ class MenuRecords(QSqlRelationalTableModel):
         #     )[0]
 
     def dfltMenuID_forGroup(self, mGroup:int) -> int:
-        cond = f'MenuGroup={mGroup} AND Argument LIKE "default" AND OptionNumber=0'
+        cond = f'MenuGroup_id={mGroup} AND Argument LIKE "default" AND OptionNumber=0'
         self.setFilter(cond)
         # if self.filter(MenuGroup=mGroup,Argument__iexact='default',OptionNumber=0).exists():
         if self.record(0).isEmpty():
@@ -144,15 +144,16 @@ class MenuRecords(QSqlRelationalTableModel):
         #     )[0]
     
     def dfltMenuGroup(self) -> int:
-        mincond = f'MenuGroup = MIN(MenuGroup)'
-        self.setFilter(mincond)
-        return self.record(0).field('MenuGroup').value()
+        sqlstmnt = f'SELECT MIN(MenuGroup_id) as dfltGroup FROM {self._tblName}'
+        tmpQuery = QSqlQuery(sqlstmnt, self._db)
+        tmpQuery.first()
+        return tmpQuery.record().field('dfltGroup').value()
         # return self.aggregate(mGroup=Min('MenuGroup'))['mGroup']
     
     def menuDict(self, mGroup:int, mID:int) ->  Dict[int,Dict[str, Any]]:
-        cond = f'MenuGroup={mGroup} AND MenuID={mID}'
+        cond = f'MenuGroup_id={mGroup} AND MenuID={mID}'
         self.setFilter(cond)
-        return { self.record(n).field('OptionNumber'): 
+        return { self.record(n).field('OptionNumber').value(): 
                     { self.record(n).fieldName(f): self.record(n).field(f).value() for f in range(self.columnCount())}
                 for n in range(self.rowCount()) }
         # return { mRec['OptionNumber']: mRec for mRec in self.filter(MenuGroup=mGroup,MenuID=mID).values() }
@@ -164,9 +165,9 @@ class MenuRecords(QSqlRelationalTableModel):
     
     # def menuDBRecs(self, mGroup:int, mID:int) ->  QuerySet:
     def menuDBRecs(self, mGroup:int, mID:int) ->  Dict[int, QSqlRecord]:
-        cond = f'MenuGroup={mGroup} AND MenuID={mID}'
+        cond = f'MenuGroup_id={mGroup} AND MenuID={mID}'
         self.setFilter(cond)
-        return { self.record(n).field('OptionNumber'): QSqlRecord(self.record(n)) 
+        return { self.record(n).field('OptionNumber').value(): QSqlRecord(self.record(n)) 
                 for n in range(self.rowCount()) }
         # return self.filter(MenuGroup=mGroup,MenuID=mID)
         # return { mRec['keys']['OptionNumber']: mRec['values'] \
@@ -176,7 +177,7 @@ class MenuRecords(QSqlRelationalTableModel):
         #     }
     
     def menuExist(self, mGroup:int, mID:int) ->  bool:
-        sqlstmnt = f' SELECT 1 FROM {self._tblName} WHERE MenuGroup={mGroup} AND MenuID={mID} AND OptionNumber=0'
+        sqlstmnt = f'SELECT 1 FROM {self._tblName} WHERE MenuGroup_id={mGroup} AND MenuID={mID} AND OptionNumber=0'
         tmpQuery = QSqlQuery(sqlstmnt, self._db)
         return tmpQuery.first()
         # return self.filter(MenuGroup=mGroup,MenuID=mID,OptionNumber=0).exists()
