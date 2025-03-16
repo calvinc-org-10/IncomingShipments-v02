@@ -17,6 +17,7 @@ from PySide6.QtCore import (QCoreApplication,
 from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, 
     )
+from PySide6.QtSql import (QSqlDatabase, QSqlRelationalTableModel, QSqlTableModel, QSqlRecord, )
 from PySide6.QtWidgets import (QApplication, QWidget, QGridLayout, QHBoxLayout, QVBoxLayout,
     QScrollArea, QCompleter, 
     QDialog, QMessageBox, QDialogButtonBox, 
@@ -813,6 +814,46 @@ class cQFmNameLabel(QLabel):
         if formName:
             self.setText(formName)
         
+
+##################################################
+##################################################
+##################################################
+
+
+class cQSqlTableModel(QSqlTableModel):
+    retListofQSQLRecord = -1
+    def __init__(self, tblName:str, db:QSqlDatabase = QSqlDatabase.database(), parent:QObject = None):
+        super().__init__(parent, db)
+        self.setTable(tblName)
+        self.setEditStrategy(QSqlTableModel.EditStrategy.OnManualSubmit)    # think about this - pass as parm?
+        self.select()
+    
+    def recordsetList(self, retFlds:int|List[str] = retListofQSQLRecord) -> List:
+        retList = []
+        self.select()
+        n = 0
+        rec = self.record(n)
+        if retFlds == '*' or (isinstance(retFlds,List) and retFlds[0]=='*'):
+            retFlds = [rec.fieldName(i) for i in range(rec.count())]
+        while not rec.isEmpty():
+            if retFlds == self.retListofQSQLRecord:
+                retList.append(rec)
+            elif isinstance(retFlds,List):
+                retList.append({fldName:rec.value(fldName) for fldName in retFlds})
+            else:
+                raise f'Invalid Field List {retFlds}'
+            #endif retFlds
+            
+            n += 1
+            rec = self.record(n)
+        #endwhile not rec.isEmpty()
+        
+        return retList
+    #enddef recordsetList
+
+class cQSqlRelationalTableModel(QSqlRelationalTableModel, cQSqlTableModel):
+    # the multiple inheritance gets everything in I need
+    ...
 
 ##################################################
 ##################################################

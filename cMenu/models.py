@@ -1,72 +1,84 @@
 
-from django.db import models
+# from django.db import models
+
+from random import randint
+
+from PySide6.QtSql import (QSqlRelation, ) # QSqlQuery, )
+from .utils import (cQSqlTableModel, cQSqlRelationalTableModel, )
+
+from .database import cMenuDatabase
 from .menucommand_constants import MENUCOMMANDS
 
 
-class menuGroups(models.Model):
-    GroupName = models.CharField(max_length=100,null=False, unique=True)
-    GroupInfo = models.CharField(max_length=250, blank=True)
-    def __str__(self) -> str:
-        return f'menuGroup {self.GroupName}'
+class menuGroups(cQSqlTableModel):
+    """
+    "id" integer NOT NULL PRIMARY KEY AUTOINCREMENT, 
+    "GroupName" varchar(100) NOT NULL UNIQUE, 
+    "GroupInfo" varchar(250) NOT NULL);
+    """
+    def __init__(self, parent = None):
+        super().__init__(parent, cMenuDatabase)
+        self.setTable('cMenu_menugroups')
+    
 
-class menuItems(models.Model):
-    # MenuID, OptionNumber is key, but django doesn't do multi-column keys.  django will create an primary key, but the UniqueConstraint below will give Uniqueness
-    MenuGroup = models.ForeignKey(menuGroups,on_delete=models.RESTRICT,null=True)
-    MenuID = models.SmallIntegerField()
-    OptionNumber = models.SmallIntegerField()
-    OptionText = models.CharField(max_length=250)
-    Command = models.IntegerField(choices=MENUCOMMANDS.items(), null=True, blank=True)
-    Argument = models.CharField(max_length=250, blank=True)
-    PWord = models.CharField(max_length=250, blank=True)
-    TopLine = models.BooleanField(null=True)
-    BottomLine = models.BooleanField(null=True)
+class menuItems(cQSqlRelationalTableModel):
+    """
+    "id" integer NOT NULL PRIMARY KEY AUTOINCREMENT, 
+    "MenuID" smallint NOT NULL, 
+    "OptionNumber" smallint NOT NULL, 
+    "OptionText" varchar(250) NOT NULL, 
+    "Command" integer NULL, 
+    "Argument" varchar(250) NOT NULL, 
+    "PWord" varchar(250) NOT NULL, 
+    "TopLine" bool NULL, 
+    "BottomLine" bool NULL, 
+    "MenuGroup_id" bigint NULL REFERENCES "cMenu_menugroups" ("id") DEFERRABLE INITIALLY DEFERRED, 
+        CONSTRAINT "mnuItUNQ_mGrp_mID_OptNum" UNIQUE ("MenuGroup_id", "MenuID", "OptionNumber"));
+    """
+    def __init__(self, parent = None):
+        super().__init__(parent, cMenuDatabase)
+        self.setTable('cMenu_menuitems')
+        self.setRelation(self.fieldIndex('MenuGroup_id'), QSqlRelation('cMenu_menugroups', 'id', 'GroupName'))
+        # set sort order
+        # ordering = ['MenuGroup','MenuID', 'OptionNumber']
+    
 
-    class Meta:
-        ordering = ['MenuGroup','MenuID', 'OptionNumber']
-        constraints = [
-                models.UniqueConstraint(fields=['MenuGroup','MenuID','OptionNumber'], name='mnuItUNQ_mGrp_mID_OptNum')
-            ]
-
-    def __str__(self) -> str:
-        return f'{self.MenuGroup}, {self.MenuID}/{self.OptionNumber}, {self.OptionText}'
-
-
-class cParameters(models.Model):
-    ParmName = models.CharField(primary_key=True, max_length=100)
-    ParmValue = models.CharField(max_length=512, blank=True, null=False, default='')
-    UserModifiable = models.BooleanField(blank=True, null=False, default=True)
-    Comments = models.CharField(max_length=512, blank=True, null=False, default='')
-
-    class Meta:
-        ordering = ['ParmName']
-
-    def __str__(self) -> str:
-        S = ''
-        if self.ParmName: 
-            S += self.ParmName
-        else:
-            S += '----'
-        S += ' ('
-        if self.ParmValue: S += self.ParmValue
-        S += ')'
-        return S
-
+class cParameters(cQSqlTableModel):
+    """
+    "ParmName" varchar(100) NOT NULL PRIMARY KEY, 
+    "ParmValue" varchar(512) NOT NULL, 
+    "UserModifiable" bool NOT NULL, 
+    "Comments" varchar(512) NOT NULL);
+    """
+    def __init__(self, parent = None):
+        super().__init__(parent, cMenuDatabase)
+        self.setTable('cMenu_cparameters')
+    
 def getcParm(req, parmname):
-    if cParameters.objects.filter(ParmName=parmname).exists():
-        return cParameters.objects.get(ParmName=parmname).ParmValue
+    r = cParameters()
+    r.setFilter(f'ParmName="{parmname}"')
+    if r.select():
+        return r.record(0).value('ParmValue')
     else:
         return ''
 
 def setcParm(req, parmname, parmvalue):
+    #FIXMEFIXMERESTARTHERE
     P, crFlag = cParameters.objects.get_or_create(ParmName=parmname)
     P.ParmValue = parmvalue
     P.save()
 
 
-class cGreetings(models.Model):
+class cGreetings(cQSqlTableModel):
+    """
     id = models.AutoField(primary_key=True)
     Greeting = models.CharField(max_length=2000)
-
-    def __str__(self):
-        return f'{self.Greeting}'
-    
+    """
+    def __init__(self, parent = None):
+        super().__init__(parent, cMenuDatabase)
+        self.setTable('cMenu_cgreetings')
+    def randomGreeting(self) -> str:
+        # do better
+        self.select()
+        n = randint(1,self.rowCount()) - 1
+        return self.record(n).value('Greeting')

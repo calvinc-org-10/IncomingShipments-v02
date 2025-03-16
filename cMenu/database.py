@@ -18,3 +18,4 @@ class cMenudb(QSqlDatabase):
         # super().__init__(dbDriver)
 
 cMenuDatabase = cMenudb()
+

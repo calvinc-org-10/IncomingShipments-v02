@@ -1,14 +1,14 @@
 from typing import (Dict, List, Tuple, Any, )
 
-# from django import db
-# from django.db import transaction
-# from django.db.models import QuerySet
-# from django.db.backends.utils import CursorWrapper
+from django import db
+from django.db import transaction
+from django.db.models import QuerySet
+from django.db.backends.utils import CursorWrapper
 
 from PySide6.QtCore import (Qt, QObject,
     Signal, Slot, 
     QAbstractTableModel, QModelIndex, )
-from PySide6.QtSql import (QSqlRecord, )
+from PySide6.QtSql import (QSqlDatabase, QSqlTableModel, )
 from PySide6.QtGui import (QFont, QIcon, )
 from PySide6.QtWidgets import ( QStyle, 
     QWidget, QGridLayout, QHBoxLayout, QVBoxLayout, QFormLayout, QFrame, 
@@ -30,7 +30,6 @@ from sysver import sysver
 from .menucommand_constants import MENUCOMMANDS, COMMANDNUMBER
 from .models import (menuItems, menuGroups, )
 from .utils import (cComboBoxFromDict, cQFmFldWidg, cQFmNameLabel, QRawSQLTableModel, cQFmNameLabel,
-    cQSqlTableModel, cQSqlRelationalTableModel, 
     UnderConstruction_Dialog, areYouSure,
     Excelfile_fromqs, ExcelWorkbook_fileext,
     pleaseWriteMe, dictfetchall, 
@@ -387,7 +386,6 @@ class cWidgetMenuItem(QWidget):
     _db = cMenuDatabase
     _menuItemstblName = 'cMenu_menuitems'
     _menuGrouptblName = 'cMenu_menugroups'
-    formFields:Dict[str, QWidget] = {}
 
     requestMenuReload:Signal = Signal()
     
@@ -465,21 +463,12 @@ class cWidgetMenuItem(QWidget):
             self.setLayout(layoutMine)
 
         def dictmenuGroup(self) -> Dict[str, int]:
-            rs = menuGroups().recordsetList(['id', 'GroupName'])
-            retDict = {d['GroupName']:d['id'] for d in rs}
-            return retDict
+            return { str(x): x.pk for x in menuGroups.objects.all() } 
         def dictmenus(self, mnuGrp:int) -> Dict[str, int]:
-            tbl = menuItems()
-            tbl.setFilter(f'MenuGroup_id = {mnuGrp} AND OptionNumber = 0')
-            rs = tbl.recordsetList(['MenuID', 'OptionText'])
-            retDict = Nochoice | {d['OptionText']:d['MenuID'] for d in rs}
-            return retDict
+            return Nochoice | { x.OptionText: x.MenuID for x in menuItems.objects.filter(MenuGroup=mnuGrp, OptionNumber=0) } 
         def dictmenuOptions(self, mnuID:int) -> List[int]:
             mnuGrp:int = self.combobxMenuGroupID.currentData()
-            tbl = menuItems
-            tbl.setFilter(f'MenuGroup={mnuGrp} AND MenuID={mnuID}')
-            # .values_list('OptionNumber', flat=True)
-            definedOptions = [rec['OptionNumber'] for rec in tbl.recordsetList['OptionNumber']]
+            definedOptions = menuItems.objects.filter(MenuGroup=mnuGrp, MenuID=mnuID).values_list('OptionNumber', flat=True)
             return Nochoice | { str(n+1): n+1 for n in range(_NUM_menuBUTTONS) if n+1 not in definedOptions }
 
         @Slot()
@@ -525,8 +514,17 @@ class cWidgetMenuItem(QWidget):
                 (chosenMenuGroup, chosenMenuID, chosenMenuOption),
                 )
     
-    def __init__(self, menuitmRec:QSqlRecord, parent:QWidget = None):
+    def __init__(self, menuitmRec:menuItems, parent:QWidget = None):
         super().__init__(parent)
+# class MenuRecords(QSqlRelationalTableModel):
+#     def __init__(self, parent = None, db = None):
+#         if db is None:
+#             db = self._db
+#         super().__init__(parent, db)
+#         self.setTable(self._tblName)
+#         self.setEditStrategy(QSqlTableModel.EditStrategy.OnManualSubmit)    # think about this - pass as parm?
+#         self.setRelation(self.fieldIndex('MenuGroup_id'), QSqlRelation('cMenu_menugroups', 'id', 'GroupName'))
+#         self.select()
         
         self.setObjectName('cWidgetMenuItem')
         
@@ -550,38 +548,26 @@ class cWidgetMenuItem(QWidget):
         self.layoutFormLine1.setSpacing(0)
         
         # self.lnedtOptionNumber = QLineEdit(self)
-        modlFld='OptionNumber'
-        wdgt = cQFmFldWidg(QLineEdit,
-            lblText='Option Number', modlFld=modlFld, parent=self)
-        self.formFields[modlFld] = wdgt
-        self.lnedtOptionNumber = wdgt
+        self.lnedtOptionNumber = cQFmFldWidg(QLineEdit,
+            lblText='Option Number', modlFld='OptionNumber', parent=self)
         # self.lnedtOptionNumber.setProperty('modelField', 'OptionNumber')
         # self.lnedtOptionNumber.setValue = self.lnedtOptionNumber.setText
-        wdgt._wdgt.setProperty('noedit', True)
-        wdgt._wdgt.setReadOnly(True)
-        wdgt._wdgt.setFrame(False)
-        wdgt._wdgt.setMaximumWidth(25)
-        wdgt._wdgt.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.lnedtOptionNumber._wdgt.setProperty('noedit', True)
+        self.lnedtOptionNumber._wdgt.setReadOnly(True)
+        self.lnedtOptionNumber._wdgt.setFrame(False)
+        self.lnedtOptionNumber._wdgt.setMaximumWidth(25)
+        self.lnedtOptionNumber._wdgt.setFocusPolicy(Qt.FocusPolicy.NoFocus)
 
-        modlFld='OptionText'
-        wdgt = cQFmFldWidg(QLineEdit, lblText='OptionText: ', modlFld=modlFld, parent=self)
-        self.formFields[modlFld] = wdgt
-        self.fldOptionText = wdgt
-        wdgt.signalFldChanged.connect(lambda: self.changeField(self.fldOptionText))
+        self.fldOptionText = cQFmFldWidg(QLineEdit, lblText='OptionText: ', modlFld='OptionText', parent=self)
+        self.fldOptionText.signalFldChanged.connect(lambda: self.changeField(self.fldOptionText))
 
-        modlFld='TopLine'
-        wdgt = cQFmFldWidg(QCheckBox, lblText='Top Line', lblChkBxYesNo={True:'YES', False:'NO'}, 
-                modlFld=modlFld, parent=self)
-        self.formFields[modlFld] = wdgt
-        self.fldMenuItemTopLine = wdgt
-        wdgt.signalFldChanged.connect(lambda newstate: self.changeField(self.fldMenuItemTopLine))
+        self.fldMenuItemTopLine = cQFmFldWidg(QCheckBox, lblText='Top Line', lblChkBxYesNo={True:'YES', False:'NO'}, 
+                modlFld='TopLine', parent=self)
+        self.fldMenuItemTopLine.signalFldChanged.connect(lambda newstate: self.changeField(self.fldMenuItemTopLine))
 
-        modlFld='BottomLine'
-        wdgt = cQFmFldWidg(QCheckBox, lblText='Btm Line', lblChkBxYesNo={True:'YES', False:'NO'}, 
-                modlFld=modlFld, parent=self)
-        self.formFields[modlFld] = wdgt
-        self.fldMenuItemBottomLine = wdgt
-        wdgt.signalFldChanged.connect(lambda newstate: self.changeField(self.fldMenuItemBottomLine))
+        self.fldMenuItemBottomLine = cQFmFldWidg(QCheckBox, lblText='Btm Line', lblChkBxYesNo={True:'YES', False:'NO'}, 
+                modlFld='BottomLine', parent=self)
+        self.fldMenuItemBottomLine.signalFldChanged.connect(lambda newstate: self.changeField(self.fldMenuItemBottomLine))
 
         # self.layoutFormLine1.addWidget(self.lblOptionNumber)
         self.layoutFormLine1.addWidget(self.lnedtOptionNumber)
@@ -595,24 +581,15 @@ class cWidgetMenuItem(QWidget):
         self.layoutFormLine2.setContentsMargins(0,0,0,0)
         self.layoutFormLine2.setSpacing(0)
 
-        modlFld='Command'
-        wdgt = cQFmFldWidg(cComboBoxFromDict, lblText='Command:', modlFld=modlFld, 
+        self.fldCommand = cQFmFldWidg(cComboBoxFromDict, lblText='Command:', modlFld='Command', 
             choices=vars(COMMANDNUMBER), parent=self)
-        self.formFields[modlFld] = wdgt
-        self.fldCommand = wdgt
-        wdgt.signalFldChanged.connect(lambda x: self.changeField(self.fldCommand))
+        self.fldCommand.signalFldChanged.connect(lambda x: self.changeField(self.fldCommand))
 
-        modlFld='Argument'
-        wdgt = cQFmFldWidg(QLineEdit, lblText='Argument: ', modlFld=modlFld, parent=self)
-        self.formFields[modlFld] = wdgt
-        self.fldArgument = wdgt
-        wdgt.signalFldChanged.connect(lambda: self.changeField(self.fldArgument))
+        self.fldArgument = cQFmFldWidg(QLineEdit, lblText='Argument: ', modlFld='Argument', parent=self)
+        self.fldArgument.signalFldChanged.connect(lambda: self.changeField(self.fldArgument))
 
-        modlFld='PWord'
-        wdgt = cQFmFldWidg(QLineEdit, lblText='Password: ', modlFld='PWord', parent=self)
-        self.formFields[modlFld] = wdgt
-        self.fldPWord = wdgt
-        wdgt.signalFldChanged.connect(lambda: self.changeField(self.fldPWord))
+        self.fldPWord = cQFmFldWidg(QLineEdit, lblText='Password: ', modlFld='PWord', parent=self)
+        self.fldPWord.signalFldChanged.connect(lambda: self.changeField(self.fldPWord))
 
         self.layoutFormLine2.addWidget(self.fldCommand)
         self.layoutFormLine2.addWidget(self.fldArgument)
@@ -671,34 +648,40 @@ class cWidgetMenuItem(QWidget):
     ########    Read
 
     def fillFormFromcurrRec(self):
-        cRec:QSqlRecord = self.currRec
-    
+        cRec:menuItems = self.currRec
+        
         # move to class var?
         forgnKeys = {
-            'id': cRec.value if cRec else '',
+            'id': cRec if cRec else '',
             'MenuGroup': cRec.MenuGroup if cRec else '',
             }
         # move to class var?
         valu_transform_flds = {
         }
         for field in cRec._meta.get_fields():
-            field_value = cRec.value(field.name)
+            field_value = getattr(cRec, field.name, None)
             field_valueStr = str(field_value)
             if field.name in forgnKeys:
                 field_valueStr = str(forgnKeys[field.name])
             if field.name in valu_transform_flds:
                 field_valueStr = valu_transform_flds[field.name][0](field_value)
             
-            if field.name in self.formFields:
-                wdgt = self.formFields[field.name]
-                wdgt.setValue(field_valueStr)
-            #endif field.name in self.formFields
+            for wdgt in self.findChildren(QWidget):
+                wdgtfld = getattr(wdgt, 'modelField', None)
+                if callable(wdgtfld): wdgtfld = wdgtfld()
+                if wdgtfld == field.name:
+                    # set wdgt value to field_value
+                    wdgt.setValue(field_valueStr)
+
+                    break   # we found the widget for this field; we don't need to keep testing widgets
+                # endif widget field = field.name
+            # endfor wdgt in self.children()
         #endfor field in cRec
         
         # fix this later ...
         
-        self.btnMoveCopy.setEnabled(cRec.value('id') is not None)
-        self.btnRemove.setEnabled(cRec.value('id') is not None)
+        self.btnMoveCopy.setEnabled(cRec.pk is not None)
+        self.btnRemove.setEnabled(cRec.pk is not None)
         
         self.setFormDirty(self, False)
     # fillFormFromRec
@@ -716,9 +699,13 @@ class cWidgetMenuItem(QWidget):
         # move to class var?
         valu_transform_flds = {
         }
-        cRec:QSqlRecord = self.currRec
+        cRec:menuItems = self.currRec
         dbField = wdgt.modelField()
 
+        wdgt_value = None
+
+        #TODO: write cUtil getQWidgetValue(wdgt), setQWidgetValue(wdgt)
+        #widgtype = wdgt.staticMetaObject.className()
         wdgt_value = wdgt.Value()
 
         if dbField in forgnKeys:
@@ -727,7 +714,7 @@ class cWidgetMenuItem(QWidget):
             wdgt_value = valu_transform_flds[dbField][1](wdgt_value)
 
         if wdgt_value or isinstance(wdgt_value,bool):
-            cRec.setValue(dbField, wdgt_value)
+            setattr(cRec, dbField, wdgt_value)
             self.setFormDirty(wdgt, True)
 
             return True
@@ -741,34 +728,12 @@ class cWidgetMenuItem(QWidget):
         if not self.isFormDirty():
             return
         
-        cRec:QSqlRecord = self.currRec
-        dbTbl = menuItems()
-        pk = cRec.value('id')
+        cRec:menuItems = self.currRec
         
-        if pk:
-            dbTbl.setFilter(f'id={pk}')
-            dbTbl.select()
-            for row in range(dbTbl.rowCount()): # row should be 0
-                if dbTbl.record(row).value('id') == pk:
-                    dbTbl.setRecord(row, cRec)
-                    break
-            #endfor
-        else:
-            dbTbl.select()
-            row = dbTbl.rowCount()
-            dbTbl.insertRecord(row,cRec)
-        #endif pk
-
-        if not dbTbl.submitAll():
-            print("Failed to submit changes:", dbTbl.lastError().text())
+        # check other traps later
         
-        # reread record
-        mGrp, mID, Opt = (cRec.value('MenuGroup_id'), cRec.value('MenuID'), cRec.value('OptionNumber'))
-        dbTbl.setFilter(f'MenuGroup_id={mGrp} AND MenuID={mID} AND OptionNumber={Opt}')
-        dbTbl.select()
-        cRec = dbTbl.record(0)
-        
-        pk = cRec.value('id')
+        cRec.save()
+        pk = cRec.pk
                     
         self.btnMoveCopy.setEnabled(pk is not None)
         self.btnRemove.setEnabled(pk is not None)
@@ -780,7 +745,6 @@ class cWidgetMenuItem(QWidget):
     ##########################################
     ########    Delete
 
-RESTART HERE
     def rmvMenuOption(self):
         # verify delete
         (mGrp, mnu, mOpt) = (self.currRec.MenuGroup, self.currRec.MenuID, self.currRec.OptionNumber)
@@ -1296,6 +1260,49 @@ class cEditMenu(QWidget):
 #############################################
 
 
+class cQSQLTableModel_NEW(QSqlTableModel):
+    # def __init__(self, rows:List[Dict[str,Any]], colNames:List[str], parent:QObject = None):
+    def __init__(self, tblName:str, db:QSqlDatabase = QSqlDatabase.database(), parent:QObject = None):
+        super().__init__(parent, db)
+        self.setTable(tblName)
+        self.setEditStrategy(QSqlTableModel.EditStrategy.OnManualSubmit)    # think about this - pass as parm?
+        self.select()
+    
+    # def rowCount(self, parent = QModelIndex()):
+    #     return len(self.queryset)
+    
+    # def columnCount(self, parent = QModelIndex()):
+    #     return len(self.headers)
+    
+    # def data(self, index, role = Qt.DisplayRole):
+    #     if not index.isValid():
+    #         return None
+    #     if role == Qt.ItemDataRole.DisplayRole:
+    #         rec = self.queryset[index.row()]
+    #         fldName = self.headers[index.column()]
+    #         value = rec[fldName]
+
+    #         return value
+    #     # endif role
+    #     return None
+
+    # # not editable - don't need setData
+
+    # def headerData(self, section, orientation, role = Qt.DisplayRole):
+    #     if role == Qt.DisplayRole:
+    #         if orientation == Qt.Orientation.Horizontal:
+    #             return self.headers[section]
+    #         elif orientation == Qt.Orientation.Vertical:
+    #             return str(section+1)
+    #         #endif orientation
+    #     # endif role
+    #     return None
+
+
+#############################################
+#############################################
+#############################################
+
 from incShip.database import incShipDatabase
 class OpenTable(QWidget):
     _tableListSQL:str = 'PRAGMA table_list;'
@@ -1393,7 +1400,7 @@ class OpenTable(QWidget):
 
     # def tableWidget(self, rows:List[Dict[str, Any]], colNames:str|List[str]) -> QTableView:
     def tableWidget(self, tbl, db) -> QTableView:
-        resultModel = cQSqlTableModel(tbl, db, self.parent())
+        resultModel = cQSQLTableModel_NEW(tbl, db, self.parent())
         resultTable = QTableView()
         # resultTable.verticalHeader().setHidden(True)
         header = resultTable.horizontalHeader()
