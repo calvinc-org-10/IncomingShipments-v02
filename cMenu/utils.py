@@ -211,10 +211,10 @@ class cComboBoxFromDict(QComboBox):
     def replaceDict(self, dict:Dict[str, Any]):
         self.clear()
         self._combolist.clear()
-        
-        for key, val in dict.items():
-            self.addItem(key,val)
-            self._combolist.append({key:val})
+        if isinstance(dict,Dict):
+            for key, val in dict.items():
+                self.addItem(key,val)
+                self._combolist.append({key:val})
 
 #########################################        
 #########################################        
@@ -678,7 +678,7 @@ class cQFmFldWidg(QWidget):
             self.setValue = lambda value: \
                 wdgt.setCurrentText(value) if wdgt.findData(value) == -1 else wdgt.setCurrentIndex(wdgt.findData(value))
 
-            if isinstance(widgType, cComboBoxFromDict):
+            if isinstance(wdgt, cComboBoxFromDict):
                 self.replaceDict = wdgt.replaceDict
 
             wdgt.activated.connect(self.fldChanged)
@@ -825,17 +825,19 @@ class cQSqlTableModel(QSqlTableModel):
     def __init__(self, tblName:str, db:QSqlDatabase = QSqlDatabase.database(), parent:QObject = None):
         super().__init__(parent, db)
         self.setTable(tblName)
+        # why does setEditStrategy crash?
         self.setEditStrategy(QSqlTableModel.EditStrategy.OnManualSubmit)    # think about this - pass as parm?
         self.select()
     
-    def recordsetList(self, retFlds:int|List[str] = retListofQSQLRecord) -> List:
+    def recordsetList(self, retFlds:int|List[str] = retListofQSQLRecord, filter:str = None) -> List:
         retList = []
+        if filter:
+            self.setFilter(filter)
         self.select()
-        n = 0
-        rec = self.record(n)
         if retFlds == '*' or (isinstance(retFlds,List) and retFlds[0]=='*'):
             retFlds = [rec.fieldName(i) for i in range(rec.count())]
-        while not rec.isEmpty():
+        for n in range(self.rowCount()):
+            rec = self.record(n)
             if retFlds == self.retListofQSQLRecord:
                 retList.append(rec)
             elif isinstance(retFlds,List):
@@ -843,17 +845,40 @@ class cQSqlTableModel(QSqlTableModel):
             else:
                 raise f'Invalid Field List {retFlds}'
             #endif retFlds
-            
-            n += 1
+        #endwhile not rec.isEmpty()
+        
+        return retList
+    #enddef recordsetList
+class cQSqlRelationalTableModel(QSqlRelationalTableModel):
+    retListofQSQLRecord = -1
+    def __init__(self, tblName:str, db:QSqlDatabase = QSqlDatabase.database(), parent:QObject = None):
+        super().__init__(parent, db)
+        self.setTable(tblName)
+        # why does setEditStrategy crash?
+        self.setEditStrategy(QSqlTableModel.EditStrategy.OnManualSubmit)    # think about this - pass as parm?
+        self.select()
+    
+    def recordsetList(self, retFlds:int|List[str] = retListofQSQLRecord, filter:str = None) -> List:
+        retList = []
+        if filter:
+            self.setFilter(filter)
+        self.select()
+        if retFlds == '*' or (isinstance(retFlds,List) and retFlds[0]=='*'):
+            retFlds = [rec.fieldName(i) for i in range(rec.count())]
+        for n in range(self.rowCount()):
             rec = self.record(n)
+            if retFlds == self.retListofQSQLRecord:
+                retList.append(rec)
+            elif isinstance(retFlds,List):
+                retList.append({fldName:rec.value(fldName) for fldName in retFlds})
+            else:
+                raise f'Invalid Field List {retFlds}'
+            #endif retFlds
         #endwhile not rec.isEmpty()
         
         return retList
     #enddef recordsetList
 
-class cQSqlRelationalTableModel(QSqlRelationalTableModel, cQSqlTableModel):
-    # the multiple inheritance gets everything in I need
-    ...
 
 ##################################################
 ##################################################

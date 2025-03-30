@@ -470,13 +470,15 @@ class cWidgetMenuItem(QWidget):
             return retDict
         def dictmenus(self, mnuGrp:int) -> Dict[str, int]:
             tbl = menuItems()
+            # tbl = MenuRecords()
             tbl.setFilter(f'MenuGroup_id = {mnuGrp} AND OptionNumber = 0')
             rs = tbl.recordsetList(['MenuID', 'OptionText'])
             retDict = Nochoice | {d['OptionText']:d['MenuID'] for d in rs}
             return retDict
         def dictmenuOptions(self, mnuID:int) -> List[int]:
             mnuGrp:int = self.combobxMenuGroupID.currentData()
-            tbl = menuItems
+            tbl = menuItems()
+            # tbl = MenuRecords()
             tbl.setFilter(f'MenuGroup={mnuGrp} AND MenuID={mnuID}')
             # .values_list('OptionNumber', flat=True)
             definedOptions = [rec['OptionNumber'] for rec in tbl.recordsetList['OptionNumber']]
@@ -675,22 +677,24 @@ class cWidgetMenuItem(QWidget):
     
         # move to class var?
         forgnKeys = {
-            'id': cRec.value if cRec else '',
-            'MenuGroup': cRec.MenuGroup if cRec else '',
+            'id': cRec.value('id') if cRec else '',
+            'MenuGroup': cRec.value('MenuGroup') if cRec else '',
             }
         # move to class var?
         valu_transform_flds = {
         }
-        for field in cRec._meta.get_fields():
-            field_value = cRec.value(field.name)
+        # for field in cRec._meta.get_fields():
+        for n in range(cRec.count()):
+            fieldname = cRec.fieldName(n)
+            field_value = cRec.value(fieldname)
             field_valueStr = str(field_value)
-            if field.name in forgnKeys:
-                field_valueStr = str(forgnKeys[field.name])
-            if field.name in valu_transform_flds:
-                field_valueStr = valu_transform_flds[field.name][0](field_value)
+            if fieldname in forgnKeys:
+                field_valueStr = str(forgnKeys[fieldname])
+            if fieldname in valu_transform_flds:
+                field_valueStr = valu_transform_flds[fieldname][0](field_value)
             
-            if field.name in self.formFields:
-                wdgt = self.formFields[field.name]
+            if fieldname in self.formFields:
+                wdgt = self.formFields[fieldname]
                 wdgt.setValue(field_valueStr)
             #endif field.name in self.formFields
         #endfor field in cRec
@@ -955,7 +959,8 @@ class cEditMenu(QWidget):
             layoutMenuID = QHBoxLayout()
             lblMenuID = QLabel(self.tr('Menu ID'))
             self.combobxMenuID = QComboBox(self)
-            definedMenus = menuItems.objects.filter(MenuGroup=mnuGrp, OptionNumber=0).values_list('MenuID', flat=True)
+            #  definedMenus = menuItems.objects.filter(MenuGroup=mnuGrp, OptionNumber=0).values_list('MenuID', flat=True)
+            definedMenus = menuItems().recordsetList('MenuID', filter=f'MenuGroup={mnuGrp} AND OptionNumber=0')   # .objects.filter(MenuGroup=mnuGrp, OptionNumber=0).values_list('MenuID', flat=True)
             self.combobxMenuID.addItems([str(n) for n in range(256) if n not in definedMenus])
             layoutMenuID.addWidget(lblMenuID)
             layoutMenuID.addWidget(self.combobxMenuID)
@@ -1008,7 +1013,8 @@ class cEditMenu(QWidget):
         self.layoutmenuHdrLeft: QVBoxLayout = QVBoxLayout()
         self.layoutmenuHdrRight: QVBoxLayout = QVBoxLayout()
         self._menuSOURCE = MenuRecords()
-        self.currentMenu:cQSqlTableModel = None
+        # self.currentMenu:cQSqlTableModel = None
+        self.currentMenu:Dict[int, QSqlRecord] = None
         self.currRec:QSqlRecord = None
         
         self.layoutmainMenu.setColumnStretch(0,1)
@@ -1036,7 +1042,7 @@ class cEditMenu(QWidget):
 
         modlFld='MenuID'
         wdgt:cQFmFldWidg = cQFmFldWidg(cComboBoxFromDict, lblText='menu', modlFld=modlFld, 
-            choices=self.dictmenus(), parent=self)
+            parent=self)
         self.formFields[modlFld] = wdgt
         self.fldmenuID:cQFmFldWidg = wdgt
         wdgt.signalFldChanged.connect(lambda idx: self.loadMenu(menuGroup=self.intmenuGroup, menuID=self.fldmenuID.Value()))
@@ -1101,6 +1107,7 @@ class cEditMenu(QWidget):
         return retDict
     def dictmenus(self, mnuGrp:int) -> Dict[str, int]:
         tbl = menuItems()
+        # tbl = MenuRecords()
         tbl.setFilter(f'MenuGroup_id = {mnuGrp} AND OptionNumber = 0')
         rs = tbl.recordsetList(['MenuID', 'OptionText'])
         retDict = Nochoice | {d['OptionText']:d['MenuID'] for d in rs}
@@ -1157,15 +1164,11 @@ class cEditMenu(QWidget):
             dbTable.select()
             insAt = dbTable.rowCount()
             if CMChoiceCopy:
-                n = 0
-                record = qsFrom.record(n)
-                while not record.isEmpty():
+                for n in range(qsFrom.rowCount()):
+                    record = qsFrom.record(n)
                     record.setNull('id')
                     record.setValue('MenuID', newMnuID)
                     dbTable.insertRecord(insAt+n, record)
-                    
-                    n += 1
-                    record = qsFrom.record(n)
                 #endwhile not record.isEmpty()
             else:
                 updtstmnt = f'UPDATE {dbTable.tableName()} SET MenuID = {newMnuID} WHERE MenuID = {mnuID}'
@@ -1181,10 +1184,10 @@ class cEditMenu(QWidget):
     ##########################################
     ########    Read
 
-    def movetoutil_findrecwithvalue(self, tblModel:cQSqlTableModel, fld:str, trgtValue) -> QSqlRecord | None:
-        n = 0
-        testrec = tblModel.record(n)
-        while not testrec.isEmpty():
+    def movetoutil_findrecwithvalue(self, tblModel:Dict[int, QSqlRecord], fld:str, trgtValue) -> QSqlRecord | None:
+        # for n in range(tblModel.rowCount()):
+        for testrec in tblModel.values():
+            # testrec = tblModel.record(n)
             if testrec.value(fld) == trgtValue:
                 return testrec
             #endif testrec.value(fld) == trgtValue:
@@ -1195,17 +1198,19 @@ class cEditMenu(QWidget):
         menuGroup = self.intmenuGroup
         menuID = self.intmenuID
         menuItemRecs = self.currentMenu
-        menuItemRecs.setFilter('OptionNumber=0')
-        menuHdrRec:QSqlRecord = self.movetoutil_findrecwithvalue(menuItemRecs,'OptionNumber',0)
+        # menuItemRecs.setFilter('OptionNumber=0')
+        # menuHdrRec:QSqlRecord = self.movetoutil_findrecwithvalue(menuItemRecs,'OptionNumber',0)
+        menuHdrRec:QSqlRecord = menuItemRecs[0]
         
         # set header elements
         self.lblnummenuGroupID.display(menuGroup)
-        self.fldmenuGroup.setValue(menuGroup)
-        self.fldmenuGroupName.setValue(menuHdrRec.MenuGroup.GroupName)
+        self.fldmenuGroup.setValue(str(menuGroup))
+        self.fldmenuGroupName.setValue(menuHdrRec.value('GroupName'))
         self.lblnummenuID.display(menuID)
-        self.fldmenuID.replaceDict(self.dictmenus())
+        d = self.dictmenus(menuGroup)
+        self.fldmenuID.replaceDict(d)
         self.fldmenuID.setValue(menuID)
-        self.fldmenuName.setValue(menuHdrRec.OptionText)
+        self.fldmenuName.setValue(menuHdrRec.value('OptionText'))
 
         for bNum in range(_NUM_menuBUTTONS):
             y, x = ((bNum % _NUM_menuBTNperCOL)+1, 0 if bNum < _NUM_menuBTNperCOL else 2)
@@ -1242,7 +1247,8 @@ class cEditMenu(QWidget):
         
         if SRC.menuExist(menuGroup, menuID):
             self.currentMenu = SRC.menuDBRecs(menuGroup, menuID)
-            self.currRec = self.movetoutil_findrecwithvalue(self.currentMenu, 'OptionNumber', 0)
+            # self.currRec = self.movetoutil_findrecwithvalue(self.currentMenu, 'OptionNumber', 0)
+            self.currRec = self.currentMenu[0]  # am I safe in assuming existence?
             self.setFormDirty(self, False)       # should this be in displayMenu ?
             self.displayMenu()
         else:

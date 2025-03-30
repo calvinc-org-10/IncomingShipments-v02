@@ -97,23 +97,47 @@ newmenu_menulist = [
 
 # from django.db.models import Min, QuerySet
 # from .models import menuItems
-from PySide6.QtSql import (QSqlRelationalTableModel, QSqlRelation, QSqlTableModel, QSqlRecord, QSqlQuery,  )
+from PySide6.QtSql import (QSqlRelationalTableModel, QSqlRelation, QSqlTableModel, QSqlQueryModel, QSqlRecord, QSqlQuery,  )
 from .database import cMenuDatabase
 
 class MenuRecords(QSqlRelationalTableModel):
+# class MenuRecords(QSqlQueryModel):
     # mSource = menuItems.objects
     _tblName = 'cMenu_menuitems'
+    _groupKey = 'MenuGroup_id'
+    _rltblName = 'cMenu_menuGroups'
     _db = cMenuDatabase
+    # _theQuery = f"""
+    #     SELECT 
+    #         t.*,
+    #         r.GroupName
+    #     FROM {_tblName} t
+    #       LEFT JOIN {_rltblName} r ON t.MenuGroup_id = r.id
+    # """
     
     def __init__(self, parent = None, db = None):
         if db is None:
             db = self._db
         super().__init__(parent, db)
+        # if db is None:
+        #     super().__init__(parent)
+        # else:
+        #     super().__init__(parent, db)
         self.setTable(self._tblName)
         self.setEditStrategy(QSqlTableModel.EditStrategy.OnManualSubmit)    # think about this - pass as parm?
-        self.setRelation(self.fieldIndex('MenuGroup_id'), QSqlRelation('cMenu_menugroups', 'id', 'GroupName'))
-        self.select()
+        self.setRelation(self.fieldIndex(self._groupKey), QSqlRelation(self._rltblName, 'id', 'GroupName'))
         
+        self.select()
+
+    def selectStatement(self):
+        base_sql = super().selectStatement()
+        # Inject your extra field (example: calculated field)
+        # Warning: This is fragile if the base class changes its SQL format
+        return base_sql.replace(
+            " FROM ",
+            f", {self._groupKey} FROM "
+        )
+
 
     def menuAttr(self, mGroup:int, mID:int, Opt:int, AttrName:str) -> Any:
         cond = f'MenuGroup_id={mGroup} AND MenuID={mID} AND OptionNumber={Opt}'
@@ -131,7 +155,7 @@ class MenuRecords(QSqlRelationalTableModel):
         cond = f'MenuGroup_id={mGroup} AND Argument LIKE "default" AND OptionNumber=0'
         self.setFilter(cond)
         # if self.filter(MenuGroup=mGroup,Argument__iexact='default',OptionNumber=0).exists():
-        if self.record(0).isEmpty():
+        if not self.record(0).value('id'):
             cond = f'MenuGroup={mGroup} AND OptionNumber=0'
             mincond = f'MenuID = MIN(MenuID) FILTER (WHERE {cond})'
             self.setFilter(mincond)
@@ -192,3 +216,4 @@ class MenuRecords(QSqlRelationalTableModel):
         return newgroupnewmenu_menulist
     def newmenuDict(self, mGroup:int, mID:int) ->  List[Dict]:
         return newmenu_menulist
+    

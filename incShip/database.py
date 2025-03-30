@@ -1,20 +1,32 @@
 from PySide6.QtSql import (QSqlDatabase, QSqlQuery )
 
-incShip_dbName = 'W:\\Logistics\\db\\hbl.sqlite'
+incShip_dbName = 'D:\\AppDev\\datasets\\hbl.sqlite'
 
+# class incShipdb(QSqlDatabase):
+class incShipdb:
+    _instance = None  # Store the singleton instance
 
-class incShipdb(QSqlDatabase):
-    def __init__(self):
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            cls._instance._init_db()  # Correctly call the method after creating instance
+        return cls._instance
+
+    def _init_db(self):
         dbDriver = 'QSQLITE'
         connectName = 'con_incShip'
-        db = QSqlDatabase.addDatabase(dbDriver, connectName)
-        super().__init__(db)
-        # con = PQconnectdb("host=server user=bart password=simpson dbname=springfield")
-        # drv = QPSQLDriver(con)
-        self.setDatabaseName(incShip_dbName)
-        res = self.open()      # this should be checked for success, but for now, take the errors raised if bad
-        # query = QSqlQuery()
-        # query.exec("SELECT NAME, ID FROM STAFF")        
-        # super().__init__(dbDriver)
 
-incShipDatabase = incShipdb()
+        # Check if the connection already exists
+        if QSqlDatabase.contains(connectName):
+            self.db = QSqlDatabase.database(connectName)
+        else:
+            self.db = QSqlDatabase.addDatabase(dbDriver, connectName)
+            self.db.setDatabaseName(incShip_dbName)
+            if not self.db.open():
+                print("Database connection failed:", self.db.lastError().text())
+
+    def connection(self):
+        """Returns the QSqlDatabase connection"""
+        return self.db
+
+incShipDatabase = incShipdb().connection()
