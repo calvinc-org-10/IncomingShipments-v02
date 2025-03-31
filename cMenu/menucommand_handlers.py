@@ -1130,9 +1130,10 @@ class cEditMenu(QWidget):
             dbTbl.select()
             row = dbTbl.rowCount()
             dbTbl.insertRecord(row,newrec)
+            dbTbl.submitAll()
             
             # fix if insertRecord didn't autosave
-            grppk = newrec.value('id')
+            grppk = dbTbl.record(row).value('id')
 
             # create a default menu
             # newgroupnewmenu_menulist to menuItems
@@ -1147,7 +1148,8 @@ class cEditMenu(QWidget):
                 for fldNm, vlu in rec.items():
                     newmenurec.setValue(fldNm, vlu)
                 dbTbl.insertRecord(0, newmenurec)
-                
+            dbTbl.submitAll()
+            
             self.loadMenu(grppk, 0)
         return
 
@@ -1257,7 +1259,7 @@ class cEditMenu(QWidget):
             msg.setWindowTitle('Menu Doesn\'t Exist')
             msg.setIcon(QMessageBox.Icon.Warning)
             msg.setStandardButtons(QMessageBox.StandardButton.Ok)
-            msg.setText(f'Menu {menuID} does\'t exist!')
+            msg.setText(f'Menu {menuID} doesn\'t exist!')
             msg.open()
     # loadMenu
 

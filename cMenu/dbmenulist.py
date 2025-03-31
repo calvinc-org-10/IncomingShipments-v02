@@ -154,12 +154,22 @@ class MenuRecords(QSqlRelationalTableModel):
     def dfltMenuID_forGroup(self, mGroup:int) -> int:
         cond = f'MenuGroup_id={mGroup} AND Argument LIKE "default" AND OptionNumber=0'
         self.setFilter(cond)
+        retval = self.record(0).field('MenuID').value()
         # if self.filter(MenuGroup=mGroup,Argument__iexact='default',OptionNumber=0).exists():
         if not self.record(0).value('id'):
-            cond = f'MenuGroup={mGroup} AND OptionNumber=0'
-            mincond = f'MenuID = MIN(MenuID) FILTER (WHERE {cond})'
-            self.setFilter(mincond)
-        return self.record(0).field('MenuID').value()
+            tbl = self.tableName()
+            grpFld = 'MenuGroup_id'
+            cond = f'{grpFld}={mGroup}'
+            minval = f'MIN(MenuID)'
+            sqlWhere = f'OptionNumber=0'
+            sqlStat = f'SELECT {minval} AS minval FROM {tbl}'
+            sqlStat += f' WHERE {sqlWhere}'
+            sqlStat += f' GROUP BY {grpFld}'
+            sqlStat += f' HAVING {grpFld}={mGroup}'
+            minfound = QSqlQueryModel()
+            minfound.setQuery(sqlStat, cMenuDatabase)
+            retval = minfound.record(0).value('minval')
+        return retval
         # return list(menuRec['keys']['MenuID'] \
         #                 for menuRec in self.mSource \
         #                 if menuRec['keys']['MenuGroup']==mGroup \
