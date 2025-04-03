@@ -479,7 +479,7 @@ class cWidgetMenuItem(QWidget):
             mnuGrp:int = self.combobxMenuGroupID.currentData()
             tbl = menuItems()
             # tbl = MenuRecords()
-            tbl.setFilter(f'MenuGroup={mnuGrp} AND MenuID={mnuID}')
+            tbl.setFilter(f'MenuGroup_id={mnuGrp} AND MenuID={mnuID}')
             # .values_list('OptionNumber', flat=True)
             definedOptions = [rec['OptionNumber'] for rec in tbl.recordsetList['OptionNumber']]
             return Nochoice | { str(n+1): n+1 for n in range(_NUM_menuBUTTONS) if n+1 not in definedOptions }
@@ -678,7 +678,7 @@ class cWidgetMenuItem(QWidget):
         # move to class var?
         forgnKeys = {
             'id': cRec.value('id') if cRec else '',
-            'MenuGroup': cRec.value('MenuGroup') if cRec else '',
+            'MenuGroup': cRec.value('MenuGroup_id') if cRec else '',
             }
         # move to class var?
         valu_transform_flds = {
@@ -960,7 +960,8 @@ class cEditMenu(QWidget):
             lblMenuID = QLabel(self.tr('Menu ID'))
             self.combobxMenuID = QComboBox(self)
             #  definedMenus = menuItems.objects.filter(MenuGroup=mnuGrp, OptionNumber=0).values_list('MenuID', flat=True)
-            definedMenus = menuItems().recordsetList('MenuID', filter=f'MenuGroup={mnuGrp} AND OptionNumber=0')   # .objects.filter(MenuGroup=mnuGrp, OptionNumber=0).values_list('MenuID', flat=True)
+            dictDefinedMenus = menuItems().recordsetList(['MenuID'], filter=f'MenuGroup_id={mnuGrp} AND OptionNumber=0')   # .objects.filter(MenuGroup=mnuGrp, OptionNumber=0).values_list('MenuID', flat=True)
+            definedMenus = [mDict['MenuID'] for mDict in dictDefinedMenus]
             self.combobxMenuID.addItems([str(n) for n in range(256) if n not in definedMenus])
             layoutMenuID.addWidget(lblMenuID)
             layoutMenuID.addWidget(self.combobxMenuID)
@@ -1110,7 +1111,7 @@ class cEditMenu(QWidget):
         # tbl = MenuRecords()
         tbl.setFilter(f'MenuGroup_id = {mnuGrp} AND OptionNumber = 0')
         rs = tbl.recordsetList(['MenuID', 'OptionText'])
-        retDict = Nochoice | {d['OptionText']:d['MenuID'] for d in rs}
+        retDict = Nochoice | {f"{d['OptionText']} ({d['MenuID']})":d['MenuID'] for d in rs}
         return retDict
 
     ##########################################
@@ -1166,14 +1167,15 @@ class cEditMenu(QWidget):
             dbTable.select()
             insAt = dbTable.rowCount()
             if CMChoiceCopy:
-                for n in range(qsFrom.rowCount()):
-                    record = qsFrom.record(n)
+                for record in qsFrom.values():
                     record.setNull('id')
                     record.setValue('MenuID', newMnuID)
-                    dbTable.insertRecord(insAt+n, record)
+                    dbTable.insertRecord(insAt, record)
+                    insAt += 1
+                dbTable.submitAll()
                 #endwhile not record.isEmpty()
             else:
-                updtstmnt = f'UPDATE {dbTable.tableName()} SET MenuID = {newMnuID} WHERE MenuID = {mnuID}'
+                updtstmnt = f'UPDATE {dbTable.tableName()} SET MenuID = {newMnuID} WHERE MenuGroup_id = {mnuGrp} AND MenuID = {mnuID}'
                 query:QSqlQuery = QSqlQuery(updtstmnt, cMenuDatabase)
                 query.exec()
             #endif CMChoiceCopy
@@ -1315,7 +1317,7 @@ class cEditMenu(QWidget):
             groupTbl.submitAll()
 
         mnuTbl = menuItems()
-        mnuTbl.setFilter(f'id={cRec.value('id')}')
+        mnuTbl.setFilter(f'{mnuTbl.tableName()}.id={cRec.value('id')}')
         mnuTbl.setRecord(0,cRec)
         mnuTbl.submitAll()
         

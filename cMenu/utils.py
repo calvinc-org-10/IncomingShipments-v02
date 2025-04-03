@@ -676,7 +676,7 @@ class cQFmFldWidg(QWidget):
 
             self.Value    = wdgt.currentData
             self.setValue = lambda value: \
-                wdgt.setCurrentText(value) if wdgt.findData(value) == -1 else wdgt.setCurrentIndex(wdgt.findData(value))
+                wdgt.setCurrentText(str(value)) if wdgt.findData(value) == -1 else wdgt.setCurrentIndex(wdgt.findData(value))
 
             if isinstance(wdgt, cComboBoxFromDict):
                 self.replaceDict = wdgt.replaceDict
