@@ -481,7 +481,7 @@ class cWidgetMenuItem(QWidget):
             # tbl = MenuRecords()
             tbl.setFilter(f'MenuGroup_id={mnuGrp} AND MenuID={mnuID}')
             # .values_list('OptionNumber', flat=True)
-            definedOptions = [rec['OptionNumber'] for rec in tbl.recordsetList['OptionNumber']]
+            definedOptions = [rec['OptionNumber'] for rec in tbl.recordsetList(['OptionNumber'])]
             return Nochoice | { str(n+1): n+1 for n in range(_NUM_menuBUTTONS) if n+1 not in definedOptions }
 
         @Slot()
@@ -747,17 +747,31 @@ class cWidgetMenuItem(QWidget):
         
         cRec:QSqlRecord = self.currRec
         dbTbl = menuItems()
-        pk = cRec.value('id')
+        pkTblName = f'{dbTbl.primaryKey().field(0).tableName()}'
+        pkFldName = f'{dbTbl.primaryKey().field(0).name()}'
+        pkFullName = f'{pkTblName}.{pkFldName}'
+        pk = cRec.value(pkFldName)
         
         if pk:
-            dbTbl.setFilter(f'id={pk}')
+            dbTbl.setFilter(f'{pkFullName}={pk}')
             dbTbl.select()
             for row in range(dbTbl.rowCount()): # row should be 0
-                if dbTbl.record(row).value('id') == pk:
+                if dbTbl.record(row).value(pkFldName) == pk:
                     dbTbl.setRecord(row, cRec)
                     break
             #endfor
         else:
+            # force values on flds with NOT NULL constraint
+            notnullFlds = {
+                # "MenuID" really should have a value
+                # "OptionNumber" should have a value or else something's SERIOUSLY wrong
+                "OptionText" : "", 
+                "Argument" : "", 
+                "PWord" : "", 
+            }
+            for fldName, replVal in notnullFlds.items():
+                if not cRec.value(fldName):
+                    cRec.setValue(fldName, replVal)
             dbTbl.select()
             row = dbTbl.rowCount()
             dbTbl.insertRecord(row,cRec)
@@ -772,7 +786,7 @@ class cWidgetMenuItem(QWidget):
         dbTbl.select()
         cRec = dbTbl.record(0)
         
-        pk = cRec.value('id')
+        pk = cRec.value(pkFldName)
                     
         self.btnMoveCopy.setEnabled(pk is not None)
         self.btnRemove.setEnabled(pk is not None)
@@ -798,16 +812,19 @@ class cWidgetMenuItem(QWidget):
             return
         
         # remove from db
-        if self.currRec.pk:
-            self.currRec.delete()
+        # if self.currRec.pk:
+        #     self.currRec.delete()
         dbTbl = menuItems()
-        pk = cRec.value('id')
+        pkTblName = f'{dbTbl.primaryKey().field(0).tableName()}'
+        pkFldName = f'{dbTbl.primaryKey().field(0).name()}'
+        pkFullName = f'{pkTblName}.{pkFldName}'
+        pk = cRec.value(pkFldName)
         
         if pk:
-            dbTbl.setFilter(f'id={pk}')
+            dbTbl.setFilter(f'{pkFullName}={pk}')
             dbTbl.select()
             for row in range(dbTbl.rowCount()): # row should be 0
-                if dbTbl.record(row).value('id') == pk:
+                if dbTbl.record(row).value(pkFldName) == pk:
                     dbTbl.removeRow(row)
                     break
             #endfor
@@ -864,23 +881,29 @@ class cWidgetMenuItem(QWidget):
         retval, CMChoiceCopy, newMnuID = dlg.exec()
         if retval:
             dbTbl = menuItems()
+            pkTblName = f'{dbTbl.primaryKey().field(0).tableName()}'
+            pkFldName = f'{dbTbl.primaryKey().field(0).name()}'
+            pkFullName = f'{pkTblName}.{pkFldName}'
             newrec = QSqlRecord(cRec)
-            newrec.setNull('id')
+            newrec.setNull(pkFldName)
             newrec.setValue('MenuGroup_id', newMnuID[0])
             newrec.setValue('MenuID', newMnuID[1])
             newrec.setValue('OptionNumber', newMnuID[2])
             dbTbl.select()
             row = dbTbl.rowCount()
             dbTbl.insertRecord(row,newrec)
-            
+            if not dbTbl.submitAll():
+                print("Failed to submit changes:", dbTbl.lastError().text())
+
             if CMChoiceCopy:
                 ... # we've done everything we need to do
             else:
-                pk = cRec.value('id')
+                pk = cRec.value(pkFldName)
                 if pk:
-                    dbTbl.setFilter(f'id={pk}')
+                    dbTbl.setFilter(f'{pkFullName}={pk}')
                     dbTbl.select()
                     dbTbl.removeRow(0)
+                    # do I need to submitAll ?
                 self.makeCurrecEmpty(mnuGrp, mnuID, optNum)
             #endif CMChoiceCopy
             
@@ -1131,7 +1154,8 @@ class cEditMenu(QWidget):
             dbTbl.select()
             row = dbTbl.rowCount()
             dbTbl.insertRecord(row,newrec)
-            dbTbl.submitAll()
+            if not dbTbl.submitAll():
+                print("Failed to submit changes:", dbTbl.lastError().text())
             
             # fix if insertRecord didn't autosave
             grppk = dbTbl.record(row).value('id')
@@ -1149,8 +1173,9 @@ class cEditMenu(QWidget):
                 for fldNm, vlu in rec.items():
                     newmenurec.setValue(fldNm, vlu)
                 dbTbl.insertRecord(0, newmenurec)
-            dbTbl.submitAll()
-            
+            if not dbTbl.submitAll():
+                print("Failed to submit changes:", dbTbl.lastError().text())
+
             self.loadMenu(grppk, 0)
         return
 
@@ -1162,20 +1187,21 @@ class cEditMenu(QWidget):
         retval, CMChoiceCopy, newMnuID = dlg.exec()
         if retval:
             qsFrom = self.currentMenu
-            dbTable = menuItems()
-            dbTable.setFilter('FALSE')
-            dbTable.select()
-            insAt = dbTable.rowCount()
+            dbTbl = menuItems()
+            dbTbl.setFilter('FALSE')
+            dbTbl.select()
+            insAt = dbTbl.rowCount()
             if CMChoiceCopy:
                 for record in qsFrom.values():
                     record.setNull('id')
                     record.setValue('MenuID', newMnuID)
-                    dbTable.insertRecord(insAt, record)
+                    dbTbl.insertRecord(insAt, record)
                     insAt += 1
-                dbTable.submitAll()
+                if not dbTbl.submitAll():
+                    print("Failed to submit changes:", dbTbl.lastError().text())
                 #endwhile not record.isEmpty()
             else:
-                updtstmnt = f'UPDATE {dbTable.tableName()} SET MenuID = {newMnuID} WHERE MenuGroup_id = {mnuGrp} AND MenuID = {mnuID}'
+                updtstmnt = f'UPDATE {dbTbl.tableName()} SET MenuID = {newMnuID} WHERE MenuGroup_id = {mnuGrp} AND MenuID = {mnuID}'
                 query:QSqlQuery = QSqlQuery(updtstmnt, cMenuDatabase)
                 query.exec()
             #endif CMChoiceCopy
@@ -1312,14 +1338,22 @@ class cEditMenu(QWidget):
         
         if self.isWdgtDirty(self.fldmenuGroupName):
             groupTbl = menuGroups()
-            groupTbl.setFilter(f'id={self.intmenuGroup}')
+            gpkTblName = f'{groupTbl.primaryKey().field(0).tableName()}'
+            gpkFldName = f'{groupTbl.primaryKey().field(0).name()}'
+            gpkFullName = f'{gpkTblName}.{gpkFldName}'
+            groupTbl.setFilter(f'{gpkFullName}={self.intmenuGroup}')
             groupTbl.record(0).setValue('GroupName', self.fldmenuGroupName.Value())
-            groupTbl.submitAll()
+            if not groupTbl.submitAll():
+                print("Failed to submit changes:", groupTbl.lastError().text())
 
         mnuTbl = menuItems()
-        mnuTbl.setFilter(f'{mnuTbl.tableName()}.id={cRec.value('id')}')
+        mpkTblName = f'{mnuTbl.primaryKey().field(0).tableName()}'
+        mpkFldName = f'{mnuTbl.primaryKey().field(0).name()}'
+        mpkFullName = f'{mpkTblName}.{mpkFldName}'
+        mnuTbl.setFilter(f"{mpkFullName}={cRec.value('id')}")
         mnuTbl.setRecord(0,cRec)
-        mnuTbl.submitAll()
+        if not mnuTbl.submitAll():
+            print("Failed to submit changes:", mnuTbl.lastError().text())
         
         self.setFormDirty(self, False)
     # writeRecord
